@@ -1,0 +1,31 @@
+Nom,Densite_g_cm3,Module_Young_GPa,Limite_Elastique_MPa,Empreinte_Carbone_kgCO2_kg
+Acier doux S235,7.85,210,235,1.85
+Acier haute résistance S355,7.85,210,355,1.95
+Acier inoxydable 304,7.93,193,215,6.80
+Acier inoxydable 316L,7.98,193,170,6.90
+Acier outil H13,7.75,215,1200,3.20
+Acier maraging 300,8.00,190,1700,4.50
+Acier à roulement 100Cr6,7.83,210,1500,2.80
+Acier Hadfield (austénitique Mn),7.80,200,380,2.40
+Fonte grise GJL-250,7.15,100,250,1.40
+Fonte ductile GJS-500,7.10,169,320,1.50
+Aluminium 1050 (pur),2.70,69,35,8.50
+Alliage aluminium 2024-T3,2.78,73,345,9.20
+Alliage aluminium 6061-T6,2.70,69,275,8.80
+Alliage aluminium 7075-T6,2.81,72,503,9.50
+Alliage aluminium 5083,2.66,70,145,8.60
+Alliage aluminium 3003,2.73,70,145,8.70
+Alliage aluminium A380 (fonderie),2.74,71,160,9.00
+Titane pur Grade 2,4.51,105,275,35.00
+Alliage titane Ti-6Al-4V,4.43,114,880,40.00
+Alliage titane Ti-3Al-2.5V,4.48,105,520,38.00
+Alliage titane Ti-6Al-2Sn-4Zr-2Mo,4.54,114,1000,42.00
+Cuivre pur C11000,8.94,117,70,3.50
+Laiton CuZn30,8.52,110,120,4.20
+Laiton CuZn40,8.39,100,140,4.10
+Bronze CuSn8,8.80,110,350,4.80
+Bronze aluminium CuAl10,7.60,120,400,4.60
+Cupronickel CuNi30,8.94,150,130,5.20
+Alliage de nickel Inconel 718,8.19,200,1100,18.00
+Alliage de nickel Hastelloy C-276,8.89,205,310,20.00
+Alliage de magnésium AZ31B,1.77,45,200,15.00
