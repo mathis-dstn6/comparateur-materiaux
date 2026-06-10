@@ -62,28 +62,29 @@ with tab1:
     st.write("---")
     
     # MOTEUR DE SUGGESTION INTERACTIF
-    
     st.subheader("💡 Assistant de Substitution Intelligent")
-    st.write("Cochez les paramètres techniques que le remplaçant doit impérativement conserver de manière similaire (à ± 20%) :")
+    st.write("Cochez les critères requis et ajustez la perte maximale acceptable (tolérance) par rapport à votre métal actuel :")
     
     c_check1, c_check2, c_check3 = st.columns(3)
     with c_check1:
-        keep_mecha = st.checkbox("Conserver la résistance mécanique (Limite élastique)", value=True)
+        keep_mecha = st.checkbox("Conserver la résistance mécanique", value=True)
+        tol_mecha = st.slider("Tolérance Limite Élastique (%)", 0, 50, 20, disabled=not keep_mecha, help="Pourcentage maximum de baisse de résistance accepté.")
     with c_check2:
-        keep_thermal = st.checkbox("Conserver la tenue thermique (Température de fusion)")
+        keep_thermal = st.checkbox("Conserver la tenue thermique", value=False)
+        tol_thermal = st.slider("Tolérance Température de Fusion (%)", 0, 50, 20, disabled=not keep_thermal, help="Pourcentage maximum de baisse de température de fusion accepté.")
     with c_check3:
-        keep_stiff = st.checkbox("Conserver la rigidité (Module de Young)")
+        keep_stiff = st.checkbox("Conserver la rigidité", value=False)
+        tol_stiff = st.slider("Tolérance Module de Young (%)", 0, 50, 20, disabled=not keep_stiff, help="Pourcentage maximum de baisse de rigidité accepté.")
 
     # Algorithme de filtrage des alternatives
     df_alt = df_initial[df_initial['Nom'] != materiau_ref].copy()
-    tolerance = 0.20
     
     if keep_mecha:
-        df_alt = df_alt[df_alt['Limite_Elastique_MPa'] >= row_ref['Limite_Elastique_MPa'] * (1 - tolerance)]
+        df_alt = df_alt[df_alt['Limite_Elastique_MPa'] >= row_ref['Limite_Elastique_MPa'] * (1 - (tol_mecha / 100))]
     if keep_thermal:
-        df_alt = df_alt[df_alt['Temp_Fusion_C'] >= row_ref['Temp_Fusion_C'] * (1 - tolerance)]
+        df_alt = df_alt[df_alt['Temp_Fusion_C'] >= row_ref['Temp_Fusion_C'] * (1 - (tol_thermal / 100))]
     if keep_stiff:
-        df_alt = df_alt[df_alt['Module_Young_GPa'] >= row_ref['Module_Young_GPa'] * (1 - tolerance)]
+        df_alt = df_alt[df_alt['Module_Young_GPa'] >= row_ref['Module_Young_GPa'] * (1 - (tol_stiff / 100))]
         
     # Tri et sélection selon l'objectif de gain
     if objectif == "Réduire l'empreinte CO₂":
@@ -109,10 +110,10 @@ with tab1:
             col_gain1.metric("Nouveau Prix", f"{meilleur_choix['Prix_euro_kg']} €/kg", f"-{gain_prix:.1f}% cher", delta_color="inverse")
             col_gain2.metric("Empreinte CO₂ associée", f"{meilleur_choix['Empreinte_CO2']} kg/kg")
             
-        st.write("**Autres alternatives viables trouvées pour ces critères :**")
+        st.write("**Autres alternatives viables trouvées pour ces critères spécifiques :**")
         st.dataframe(df_alt[colonnes_affichage], use_container_width=True)
     else:
-        st.info("Aucun autre alliage de la base de données ne permet d'améliorer ce critère tout en respectant vos contraintes techniques. Essayez de décocher une contrainte.")
+        st.info("Aucun autre alliage de la base de données ne permet d'améliorer ce critère tout en respectant vos tolérances personnalisées. Essayez d'augmenter les pourcentages de tolérance.")
 
     st.write("---")
     st.subheader("📋 Base complète pour référence")
