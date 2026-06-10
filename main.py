@@ -62,7 +62,7 @@ with tab1:
     st.write("---")
     
     # MOTEUR DE SUGGESTION INTERACTIF
-    st.subplots_adjust()
+    
     st.subheader("💡 Assistant de Substitution Intelligent")
     st.write("Cochez les paramètres techniques que le remplaçant doit impérativement conserver de manière similaire (à ± 20%) :")
     
