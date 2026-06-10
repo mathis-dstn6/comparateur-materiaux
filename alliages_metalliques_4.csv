@@ -1,0 +1,31 @@
+Nom;Densite;Module_Young_GPa;Limite_Elastique_MPa;Empreinte_CO2;Prix_euro_kg;Temp_Fusion_C;Conductivite_Thermique_W_mK;Recyclabilite_pct
+Acier doux S235;7850;210;235;1.85;0.8;1520;50;95
+Acier haute résistance S355;7850;210;355;1.95;1.0;1520;48;95
+Acier inoxydable 304;7930;193;215;6.80;3.5;1450;16;85
+Acier inoxydable 316L;7980;193;170;6.90;4.5;1375;14;85
+Acier outil H13;7750;215;1200;3.20;6.0;1427;25;70
+Acier maraging 300;8000;190;1700;4.50;25.0;1413;20;60
+Acier à roulement 100Cr6;7830;210;1500;2.80;2.5;1450;46;80
+Acier Hadfield (austénitique Mn);7800;200;380;2.40;2.2;1400;14;75
+Fonte grise GJL-250;7150;100;250;1.40;0.7;1200;46;90
+Fonte ductile GJS-500;7100;169;320;1.50;0.9;1150;36;90
+Aluminium 1050 (pur);2700;69;35;8.50;2.2;657;222;95
+Alliage aluminium 2024-T3;2780;73;345;9.20;4.5;638;121;85
+Alliage aluminium 6061-T6;2700;69;275;8.80;3.8;652;167;90
+Alliage aluminium 7075-T6;2810;72;503;9.50;5.5;635;130;85
+Alliage aluminium 5083;2660;70;145;8.60;3.5;638;117;90
+Alliage aluminium 3003;2730;70;145;8.70;3.2;654;193;90
+Alliage aluminium A380 (fonderie);2740;71;160;9.00;3.0;595;96;80
+Titane pur Grade 2;4510;105;275;35.00;20.0;1668;16;95
+Alliage titane Ti-6Al-4V;4430;114;880;40.00;35.0;1660;7;90
+Alliage titane Ti-3Al-2.5V;4480;105;520;38.00;30.0;1650;10;90
+Alliage titane Ti-6Al-2Sn-4Zr-2Mo;4540;114;1000;42.00;45.0;1649;8;85
+Cuivre pur C11000;8940;117;70;3.50;9.2;1083;385;95
+Laiton CuZn30;8520;110;120;4.20;7.5;955;123;90
+Laiton CuZn40;8390;100;140;4.10;7.0;905;116;90
+Bronze CuSn8;8800;110;350;4.80;10.5;1000;62;85
+Bronze aluminium CuAl10;7600;120;400;4.60;9.0;1040;59;85
+Cupronickel CuNi30;8940;150;130;5.20;18.0;1170;29;85
+Alliage de nickel Inconel 718;8190;200;1100;18.00;55.0;1336;11;70
+Alliage de nickel Hastelloy C-276;8890;205;310;20.00;65.0;1371;10;65
+Alliage de magnésium AZ31B;1770;45;200;15.00;4.5;630;77;85
