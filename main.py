@@ -8,7 +8,7 @@ st.write("Trouvez le matériau idéal pour votre cahier des charges.")
 @st.cache_data
 def charger_donnees():
     # Remplacement des valeurs 0 pour éviter les divisions par zéro
-    df = pd.read_csv('alliages_metalliques_2.csv') 
+    df = pd.read_csv('alliages_metalliques_3.csv', sep=';') 
     df['Empreinte_Carbone_kgCO2_kg'] = df['Empreinte_Carbone_kgCO2_kg'].replace(0, 1e-6)
     df['Densite_g_cm3'] = df['Densite_g_cm3'].replace(0, 1e-6)
     df['Prix_euro_kg'] = df['Prix_euro_kg'].replace(0, 1e-6)
