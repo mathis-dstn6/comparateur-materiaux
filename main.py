@@ -190,7 +190,7 @@ with st.expander("👋 Comment utiliser cette plateforme ? (Guide Rapide)"):
     * **💡 Astuce Pro (Simulation Pièce) :** Activez l'interrupteur de simulation pour entrer le poids de votre pièce actuelle. L'algorithme calculera l'allègement exact généré par la différence de densité des matériaux, vous donnant l'impact CO₂ et financier réel !
     * **Étape 3 :** Onglet *Étude* pour définir un cahier des charges strict et exporter les meilleurs candidats.
     """)
-    
+
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2942/2942232.png", width=80) 
     st.header("⚙️ Configuration")
@@ -205,7 +205,9 @@ tab1, tab2 = st.tabs(["🔄 Substitution Intelligente", "📐 Étude & Cahier de
 with tab1:
     col_sel, col_tol = st.columns([1, 2])
     with col_sel:
-        materiau_ref = st.selectbox("Sélectionnez le matériau de référence :", df_recherche['Nom'].tolist())
+        # Tri alphabétique de la liste et mise à jour du label
+        liste_materiaux = sorted(df_recherche['Nom'].tolist())
+        materiau_ref = st.selectbox("Sélectionnez le matériau de référence (tapez pour chercher) :", liste_materiaux)
         row_ref = df_initial[df_initial['Nom'] == materiau_ref].iloc[0]
         
     with col_tol:
