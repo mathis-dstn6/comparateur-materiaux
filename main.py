@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 # Gestion gracieuse de l'export PDF
 try:
@@ -44,12 +45,9 @@ def charger_donnees():
         if col in df.columns:
             df[col] = df[col].replace(0, 1e-6)
             
-    # Calcul des indices d'Ashby
     df['Indice_Traction'] = df['Limite_Elastique_MPa'] / df['Densite']
     df['Indice_Flexion'] = np.sqrt(df['Limite_Elastique_MPa']) / df['Densite']
     
-    # Calcul du KPI : Score Eco-Conception (sur 100)
-    # Formule : (Recyclabilité / 100) * (5 / Empreinte CO2) * 100 (Plafonné à 100)
     def calc_eco_score(row):
         score = (row['Recyclabilite_pct'] / 100) * (5 / row['Empreinte_CO2']) * 100
         return max(0, min(100, int(score)))
@@ -60,55 +58,123 @@ def charger_donnees():
 df_initial = charger_donnees()
 colonnes_brutes_affichage = list(DISPLAY_MAP.keys())
 
-# --- GÉNÉRATEUR DE RAPPORT PDF ---
+# --- GÉNÉRATEUR DE RAPPORT PDF PREMIUM ---
 def generer_pdf(ref, alt, gain_co2, gain_prix):
     pdf = FPDF()
     pdf.add_page()
+    
+    # Couleurs
+    NOIR = (30, 30, 30)
+    GRIS = (100, 100, 100)
+    
+    # ---------------- EN-TÊTE ----------------
+    pdf.set_fill_color(46, 125, 50) # Vert foncé
+    pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, "Rapport d'Eco-Conception : Substitution de Materiau", ln=True, align="C")
-    pdf.ln(10)
-    
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, f"1. Materiau d'origine : {ref['Nom']}", ln=True)
-    pdf.set_font("Arial", '', 11)
-    pdf.cell(0, 8, f"   - Empreinte carbone : {ref['Empreinte_CO2']} kg CO2/kg", ln=True)
-    pdf.cell(0, 8, f"   - Prix moyen : {ref['Prix_euro_kg']} EUR/kg", ln=True)
-    pdf.cell(0, 8, f"   - Limite Elastique : {ref['Limite_Elastique_MPa']} MPa", ln=True)
-    
+    pdf.cell(0, 15, "RAPPORT D'AUDIT : SUBSTITUTION ECO-RESPONSABLE", ln=True, align="C", fill=True)
     pdf.ln(5)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, f"2. Alternative recommandee : {alt['Nom']}", ln=True)
-    pdf.set_font("Arial", '', 11)
-    pdf.cell(0, 8, f"   - Nouvelle empreinte : {alt['Empreinte_CO2']} kg CO2/kg", ln=True)
-    pdf.cell(0, 8, f"   - Nouveau prix : {alt['Prix_euro_kg']} EUR/kg", ln=True)
-    pdf.cell(0, 8, f"   - Limite Elastique : {alt['Limite_Elastique_MPa']} MPa", ln=True)
     
-    pdf.ln(10)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, "3. Bilan et Gains estimes :", ln=True)
-    pdf.set_font("Arial", '', 11)
-    pdf.cell(0, 8, f"   -> Reduction de l'empreinte CO2 : {gain_co2:.1f} %", ln=True)
-    pdf.cell(0, 8, f"   -> Reduction du cout matiere : {gain_prix:.1f} %", ln=True)
+    # Date et crédit
+    pdf.set_text_color(*GRIS)
+    pdf.set_font("Arial", 'I', 10)
+    date_jour = datetime.now().strftime("%d/%m/%Y a %H:%M")
+    pdf.cell(0, 6, f"Genere le {date_jour} par EcoMetal Selector Pro", ln=True, align="R")
+    pdf.ln(8)
     
-    # Encodage standard pour éviter les erreurs d'accents dans fpdf
+    # ---------------- SECTION 1 : ACTUEL ----------------
+    pdf.set_text_color(*NOIR)
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_fill_color(230, 230, 230) # Gris clair
+    pdf.cell(0, 10, "  1. ANALYSE DU MATERIAU ACTUEL", ln=True, fill=True)
+    pdf.set_font("Arial", '', 11)
+    pdf.ln(3)
+    pdf.cell(0, 6, f"   * Nom de l'alliage : {ref['Nom']} ({ref['Famille']})", ln=True)
+    pdf.cell(0, 6, f"   * Score Eco-Conception : {ref['Score_Eco']} / 100", ln=True)
+    pdf.cell(0, 6, f"   * Empreinte Carbone : {ref['Empreinte_CO2']} kg CO2 / kg", ln=True)
+    pdf.cell(0, 6, f"   * Prix estimatif moyen : {ref['Prix_euro_kg']} EUR / kg", ln=True)
+    pdf.cell(0, 6, f"   * Limite Elastique (Mecanique) : {ref['Limite_Elastique_MPa']} MPa", ln=True)
+    pdf.cell(0, 6, f"   * Densite : {ref['Densite']} kg/m3", ln=True)
+    pdf.ln(5)
+    
+    # ---------------- SECTION 2 : NOUVEAU ----------------
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_fill_color(200, 240, 200) # Vert pastel clair
+    pdf.cell(0, 10, "  2. ALTERNATIVE RECOMMANDEE", ln=True, fill=True)
+    pdf.set_font("Arial", '', 11)
+    pdf.ln(3)
+    pdf.cell(0, 6, f"   * Nom de l'alliage : {alt['Nom']} ({alt['Famille']})", ln=True)
+    pdf.cell(0, 6, f"   * Nouveau Score Eco : {alt['Score_Eco']} / 100", ln=True)
+    pdf.cell(0, 6, f"   * Nouvelle Empreinte : {alt['Empreinte_CO2']} kg CO2 / kg", ln=True)
+    pdf.cell(0, 6, f"   * Nouveau Prix estimatif : {alt['Prix_euro_kg']} EUR / kg", ln=True)
+    pdf.cell(0, 6, f"   * Limite Elastique (Mecanique) : {alt['Limite_Elastique_MPa']} MPa", ln=True)
+    pdf.cell(0, 6, f"   * Densite : {alt['Densite']} kg/m3", ln=True)
+    pdf.ln(5)
+    
+    # ---------------- SECTION 3 : GAINS ----------------
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_fill_color(255, 240, 200) # Jaune pastel clair
+    pdf.cell(0, 10, "  3. BILAN DETAILLE DES GAINS RSE ET FINANCIERS", ln=True, fill=True)
+    pdf.set_font("Arial", '', 11)
+    pdf.ln(3)
+    
+    diff_co2 = ref['Empreinte_CO2'] - alt['Empreinte_CO2']
+    diff_prix = ref['Prix_euro_kg'] - alt['Prix_euro_kg']
+    diff_score = alt['Score_Eco'] - ref['Score_Eco']
+    
+    # Impact Environnemental
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(55, 8, "   Impact Environnemental : ", ln=False)
+    pdf.set_font("Arial", '', 11)
+    signe_co2 = "-" if diff_co2 > 0 else "+"
+    pdf.cell(0, 8, f"{signe_co2}{abs(diff_co2):.2f} kg CO2/kg  ({'-' if gain_co2 > 0 else '+'}{abs(gain_co2):.1f} % d'empreinte)", ln=True)
+    
+    # Impact Economique
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(55, 8, "   Impact Economique : ", ln=False)
+    pdf.set_font("Arial", '', 11)
+    signe_prix = "-" if diff_prix > 0 else "+"
+    pdf.cell(0, 8, f"{signe_prix}{abs(diff_prix):.2f} EUR/kg  ({'-' if gain_prix > 0 else '+'}{abs(gain_prix):.1f} % sur le cout matiere)", ln=True)
+    
+    # Amélioration Globale
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(55, 8, "   Score Eco-Conception : ", ln=False)
+    pdf.set_font("Arial", '', 11)
+    signe_score = "+" if diff_score > 0 else ""
+    pdf.cell(0, 8, f"{signe_score}{diff_score} points RSE", ln=True)
+    
+    pdf.ln(15)
+    
+    # ---------------- FOOTER / MARKETING ----------------
+    pdf.set_text_color(*GRIS)
+    pdf.set_font("Arial", 'I', 10)
+    footer_text = (
+        "Ce document certifie la pertinence de la substitution metallurgique proposee. "
+        "L'analyse croisee a ete effectuee en temps reel via le moteur d'inference "
+        "EcoMetal Selector Pro, en s'appuyant sur notre base de donnees industrielle. "
+        "Cet outil d'aide a la decision permet aux bureaux d'etudes de se conformer "
+        "aux exigences mecaniques tout en accelerant la transition ecologique de leur "
+        "chaine d'approvisionnement."
+    )
+    pdf.multi_cell(0, 5, footer_text, align="J")
+    
+    # Encode pour éviter les bugs d'accents du PDF
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
 # --- INTERFACE UTILISATEUR PRINCIPALE ---
 st.title("🌱 EcoMetal Selector Pro")
 
-# Expander d'Onboarding
 with st.expander("👋 Comment utiliser cette plateforme ? (Guide Rapide)"):
     st.markdown("""
     **Bienvenue sur l'outil d'aide à la décision pour l'éco-conception.**
     * **Étape 1 :** Utilisez le menu latéral pour filtrer les familles de matériaux.
     * **Étape 2 :** Dans l'onglet *Substitution*, sélectionnez votre matériau actuel pour trouver un jumeau numérique plus responsable.
     * **Étape 3 :** Ajustez les tolérances techniques (mécaniques, thermiques).
-    * **Étape 4 :** Téléchargez le rapport PDF pour justifier votre choix auprès de votre hiérarchie ou de vos clients.
+    * **Étape 4 :** Téléchargez le rapport PDF Premium pour justifier votre choix auprès de votre hiérarchie ou de vos clients.
     """)
 
 # --- BARRE LATÉRALE (SIDEBAR) ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2942/2942232.png", width=80) # Icône générique
+    st.image("https://cdn-icons-png.flaticon.com/512/2942/2942232.png", width=80) 
     st.header("⚙️ Configuration Globale")
     
     familles_disponibles = ['Toutes'] + sorted(df_initial['Famille'].unique().tolist())
@@ -158,7 +224,6 @@ with tab1:
         keep_stiff = st.checkbox("Conserver la rigidité", value=False)
         tol_stiff = st.slider("Tolérance Module de Young (%)", 0, 50, 20, disabled=not keep_stiff)
 
-    # Algorithme de recherche
     df_alt = df_initial[df_initial['Nom'] != materiau_ref].copy()
     if keep_mecha:
         df_alt = df_alt[df_alt['Limite_Elastique_MPa'] >= row_ref['Limite_Elastique_MPa'] * (1 - (tol_mecha / 100))]
@@ -176,7 +241,6 @@ with tab1:
         meilleur_choix = df_alt.iloc[0]
         st.success(f"### 🎉 Alternative recommandée : **{meilleur_choix['Nom']}**")
         
-        # Calcul des gains
         gain_co2 = ((row_ref['Empreinte_CO2'] - meilleur_choix['Empreinte_CO2']) / row_ref['Empreinte_CO2']) * 100
         gain_prix = ((row_ref['Prix_euro_kg'] - meilleur_choix['Prix_euro_kg']) / row_ref['Prix_euro_kg']) * 100
         
@@ -185,21 +249,18 @@ with tab1:
         col_gain2.metric("Nouveau Prix", f"{meilleur_choix['Prix_euro_kg']} €/kg", f"{'-' if gain_prix > 0 else '+'}{abs(gain_prix):.1f}% coût", delta_color="inverse")
         col_gain3.metric("Nouveau Score Éco", f"{meilleur_choix['Score_Eco']} /100", f"{meilleur_choix['Score_Eco'] - row_ref['Score_Eco']} pts")
         
-        # Bouton d'export PDF
+        # --- BOUTON PDF ICI ---
         if HAS_FPDF:
             pdf_bytes = generer_pdf(row_ref, meilleur_choix, gain_co2, gain_prix)
             st.download_button(
-                label="📄 Télécharger le Rapport d'Audit (PDF)",
+                label="📄 Télécharger le Rapport d'Audit Complet (PDF)",
                 data=pdf_bytes,
-                file_name=f"Rapport_Substitution_{materiau_ref.replace(' ', '_')}.pdf",
+                file_name=f"Rapport_EcoMetal_{materiau_ref.replace(' ', '_')}.pdf",
                 mime="application/pdf",
                 type="primary"
             )
-        else:
-            st.warning("⚠️ Module PDF non installé. Exécutez 'uv pip install fpdf' pour activer l'export.")
             
         st.write("**Aperçu des autres alternatives viables :**")
-        # Affichage avec renommage propre
         df_alt_display = df_alt[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP)
         st.dataframe(df_alt_display, use_container_width=True)
     else:
@@ -249,11 +310,9 @@ with tab2:
     st.subheader(f"📊 {len(df_filtre)} matériau(x) valide(s)")
     
     if not df_filtre.empty:
-        # Affichage du tableau formaté
         df_filtre_display = df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP)
         st.dataframe(df_filtre_display, use_container_width=True)
         
-        # Export CSV Propre
         csv_data = df_filtre_display.to_csv(index=False, sep=';').encode('utf-8')
         st.download_button(
             label="📥 Exporter les résultats (CSV)",
