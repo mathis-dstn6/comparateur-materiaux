@@ -29,6 +29,15 @@ DISPLAY_MAP = {
     'Score_Eco': 'Score Éco-Conception (/100)'
 }
 
+# --- TEXTES DES TOOLTIPS (BULLES D'AIDE) ---
+HELP_RE = "Limite Élastique (Re) : Contrainte mécanique maximale que le matériau peut supporter avant de se déformer de manière irréversible. Représente la solidité brute."
+HELP_YOUNG = "Module de Young (E) : Mesure la rigidité du matériau. Plus il est élevé, moins la pièce fléchira (se courbera) sous le poids."
+HELP_CO2 = "Empreinte Carbone : Kilos de CO₂ émis dans l'atmosphère pour extraire, fondre et produire 1 kg de cet alliage."
+HELP_PRIX = "Prix de gros estimatif sur le marché industriel européen pour 1 kg de matière."
+HELP_SCORE = "Note sur 100 calculée par notre algorithme : (Recyclabilité / 100) * (5 / Empreinte CO2) * 100. Valorise les matériaux circulaires et bas carbone."
+HELP_FUSION = "Température de passage de l'état solide à liquide. Crucial pour les procédés de fabrication (fonderie, soudage) et la tenue à chaud en service."
+HELP_COND = "Capacité du matériau à propager la chaleur. Important pour dissiper la chaleur (ex: radiateurs) ou pour isoler thermiquement."
+
 # --- CHARGEMENT ET PRÉPARATION DES DONNÉES ---
 @st.cache_data
 def charger_donnees():
@@ -248,13 +257,22 @@ with tab1:
         c_check1, c_check2, c_check3 = st.columns(3)
         with c_check1:
             keep_mecha = st.checkbox("Conserver Résistance", value=True)
-            tol_mecha = st.slider("Tolérance Re (%)", 0, 50, 20, disabled=not keep_mecha)
+            tol_mecha = st.slider("Tolérance Re (%)", 0, 50, 20, disabled=not keep_mecha, help="Pourcentage de perte maximale acceptée sur la Limite Élastique.")
         with c_check2:
             keep_thermal = st.checkbox("Conserver Tenue Thermique", value=False)
-            tol_thermal = st.slider("Tolérance Fusion (%)", 0, 50, 20, disabled=not keep_thermal)
+            tol_thermal = st.slider("Tolérance Fusion (%)", 0, 50, 20, disabled=not keep_thermal, help="Pourcentage de baisse de température de fusion accepté.")
         with c_check3:
             keep_stiff = st.checkbox("Conserver Rigidité", value=False)
-            tol_stiff = st.slider("Tolérance Young (%)", 0, 50, 20, disabled=not keep_stiff)
+            tol_stiff = st.slider("Tolérance Young (%)", 0, 50, 20, disabled=not keep_stiff, help="Pourcentage de perte maximale acceptée sur la rigidité globale de la pièce.")
+
+    st.markdown(f"#### 📊 Profil du matériau : **{materiau_ref}**")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Score Éco-Conception", f"{row_ref['Score_Eco']} /100", help=HELP_SCORE)
+    c2.metric("Limite Élastique", f"{row_ref['Limite_Elastique_MPa']} MPa", help=HELP_RE)
+    c3.metric("Empreinte CO₂", f"{row_ref['Empreinte_CO2']} kg/kg", help=HELP_CO2)
+    c4.metric("Prix", f"{row_ref['Prix_euro_kg']} €/kg", help=HELP_PRIX)
+    
+    st.write("---")
 
     df_alt = df_initial[df_initial['Nom'] != materiau_ref].copy()
     if keep_mecha: df_alt = df_alt[df_alt['Limite_Elastique_MPa'] >= row_ref['Limite_Elastique_MPa'] * (1 - (tol_mecha / 100))]
@@ -275,9 +293,9 @@ with tab1:
         diff_score = meilleur_choix['Score_Eco'] - row_ref['Score_Eco']
         
         col_gain1, col_gain2, col_gain3 = st.columns(3)
-        col_gain1.metric("Nouvelle Empreinte CO₂", f"{meilleur_choix['Empreinte_CO2']} kg/kg", f"-{gain_co2:.1f}% CO₂", delta_color="inverse")
-        col_gain2.metric("Nouveau Prix", f"{meilleur_choix['Prix_euro_kg']} €/kg", f"{'-' if gain_prix > 0 else '+'}{abs(gain_prix):.1f}% coût", delta_color="inverse")
-        col_gain3.metric("Nouveau Score Éco", f"{meilleur_choix['Score_Eco']} /100", f"{'+' if diff_score >= 0 else ''}{diff_score} pts")
+        col_gain1.metric("Nouvelle Empreinte CO₂", f"{meilleur_choix['Empreinte_CO2']} kg/kg", f"-{gain_co2:.1f}% CO₂", delta_color="inverse", help=HELP_CO2)
+        col_gain2.metric("Nouveau Prix", f"{meilleur_choix['Prix_euro_kg']} €/kg", f"{'-' if gain_prix > 0 else '+'}{abs(gain_prix):.1f}% coût", delta_color="inverse", help=HELP_PRIX)
+        col_gain3.metric("Nouveau Score Éco", f"{meilleur_choix['Score_Eco']} /100", f"{'+' if diff_score >= 0 else ''}{diff_score} pts", help=HELP_SCORE)
         
         st.write("---")
         
@@ -310,26 +328,28 @@ with tab1:
 with tab2:
     st.header("Étude de Faisabilité & Cahier des Charges")
     
-    type_indice = st.selectbox("Indice de performance (Méthode d'Ashby) :", ["Aucun - Tri standard", "Traction pure (Max Re / ρ)", "Flexion pure (Max √Re / ρ)"])
+    type_indice = st.selectbox("Indice de performance (Méthode d'Ashby) :", ["Aucun - Tri standard", "Traction pure (Max Re / ρ)", "Flexion pure (Max √Re / ρ)"], help="Permet d'optimiser le rapport résistance/poids. L'équation d'Ashby classe les matériaux selon la légèreté pour une contrainte donnée.")
     
     st.write("---")
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("### ⚙️ Mécanique")
-        limite_elastique_min = st.slider("Limite Élastique Min (MPa)", int(df_initial['Limite_Elastique_MPa'].min()), int(df_initial['Limite_Elastique_MPa'].max()), int(df_initial['Limite_Elastique_MPa'].min()))
-        module_young_min = st.slider("Module de Young Min (GPa)", int(df_initial['Module_Young_GPa'].min()), int(df_initial['Module_Young_GPa'].max()), int(df_initial['Module_Young_GPa'].min()))
+        limite_elastique_min = st.slider("Limite Élastique Min (MPa)", int(df_initial['Limite_Elastique_MPa'].min()), int(df_initial['Limite_Elastique_MPa'].max()), int(df_initial['Limite_Elastique_MPa'].min()), help=HELP_RE)
+        module_young_min = st.slider("Module de Young Min (GPa)", int(df_initial['Module_Young_GPa'].min()), int(df_initial['Module_Young_GPa'].max()), int(df_initial['Module_Young_GPa'].min()), help=HELP_YOUNG)
     with c2:
         st.markdown("### 🌡️ Thermique")
-        temp_fusion_min = st.slider("Temp. de Fusion Min (°C)", int(df_initial['Temp_Fusion_C'].min()), int(df_initial['Temp_Fusion_C'].max()), int(df_initial['Temp_Fusion_C'].min()))
+        temp_fusion_min = st.slider("Temp. de Fusion Min (°C)", int(df_initial['Temp_Fusion_C'].min()), int(df_initial['Temp_Fusion_C'].max()), int(df_initial['Temp_Fusion_C'].min()), help=HELP_FUSION)
+        conductivite_min = st.slider("Conductivité Min (W/m·K)", int(df_initial['Conductivite_Thermique_W_mK'].min()), int(df_initial['Conductivite_Thermique_W_mK'].max()), int(df_initial['Conductivite_Thermique_W_mK'].min()), help=HELP_COND)
     with c3:
         st.markdown("### 🌱 Éco & Coûts")
-        empreinte_co2_max = st.slider("Empreinte CO₂ Max (kg/kg)", float(df_initial['Empreinte_CO2'].min()), float(df_initial['Empreinte_CO2'].max()), float(df_initial['Empreinte_CO2'].max()))
-        prix_max = st.slider("Prix Max (€/kg)", float(df_initial['Prix_euro_kg'].min()), float(df_initial['Prix_euro_kg'].max()), float(df_initial['Prix_euro_kg'].max()))
+        empreinte_co2_max = st.slider("Empreinte CO₂ Max (kg/kg)", float(df_initial['Empreinte_CO2'].min()), float(df_initial['Empreinte_CO2'].max()), float(df_initial['Empreinte_CO2'].max()), help=HELP_CO2)
+        prix_max = st.slider("Prix Max (€/kg)", float(df_initial['Prix_euro_kg'].min()), float(df_initial['Prix_euro_kg'].max()), float(df_initial['Prix_euro_kg'].max()), help=HELP_PRIX)
         
     df_filtre = df_initial[
         (df_initial['Limite_Elastique_MPa'] >= limite_elastique_min) &
         (df_initial['Module_Young_GPa'] >= module_young_min) &
         (df_initial['Temp_Fusion_C'] >= temp_fusion_min) &
+        (df_initial['Conductivite_Thermique_W_mK'] >= conductivite_min) &
         (df_initial['Empreinte_CO2'] <= empreinte_co2_max) &
         (df_initial['Prix_euro_kg'] <= prix_max)
     ].copy()
