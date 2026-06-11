@@ -104,6 +104,20 @@ def generer_pdf(ref, alt, gain_co2, gain_prix):
     pdf.cell(0, 8, f"   -> Economie : {ref['Prix_euro_kg'] - alt['Prix_euro_kg']:.2f} EUR/kg economises", ln=True)
     pdf.cell(0, 8, f"   -> Score RSE : +{alt['Score_Eco'] - ref['Score_Eco']} points", ln=True)
     
+    # --- FOOTER MARKETING SUBSTITUTION ---
+    pdf.ln(15)
+    pdf.set_text_color(*GRIS)
+    pdf.set_font("Arial", 'I', 10)
+    footer_text = (
+        "Ce document certifie la pertinence de la substitution metallurgique proposee. "
+        "L'analyse croisee a ete effectuee en temps reel via le moteur d'inference "
+        "EcoMetal Selector Pro, en s'appuyant sur notre base de donnees industrielle. "
+        "Cet outil d'aide a la decision permet aux bureaux d'etudes de se conformer "
+        "aux exigences mecaniques tout en accelerant la transition ecologique de leur "
+        "chaine d'approvisionnement."
+    )
+    pdf.multi_cell(0, 5, footer_text, align="J")
+    
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
 # --- GÉNÉRATEUR PDF 2 : CAHIER DES CHARGES ---
@@ -112,7 +126,7 @@ def generer_pdf_etude(df_top, criteres):
     pdf.add_page()
     NOIR, GRIS = (30, 30, 30), (100, 100, 100)
     
-    pdf.set_fill_color(25, 118, 210) # Bleu Ingénieur
+    pdf.set_fill_color(25, 118, 210)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 15, "ETUDE DE FAISABILITE : CAHIER DES CHARGES MATERIAUX", ln=True, align="C", fill=True)
@@ -160,6 +174,20 @@ def generer_pdf_etude(df_top, criteres):
     pdf.cell(0, 7, f"   -> Le plus ecologique : {best_co2['Nom']} ({best_co2['Empreinte_CO2']} kg CO2/kg)", ln=True)
     pdf.cell(0, 7, f"   -> Le plus economique : {best_prix['Nom']} ({best_prix['Prix_euro_kg']} EUR/kg)", ln=True)
     pdf.cell(0, 7, f"   -> Le plus resistant : {best_re['Nom']} ({best_re['Limite_Elastique_MPa']} MPa)", ln=True)
+    
+    # --- FOOTER MARKETING ÉTUDE ---
+    pdf.ln(15)
+    pdf.set_text_color(*GRIS)
+    pdf.set_font("Arial", 'I', 10)
+    footer_text = (
+        "Ce document certifie la pertinence de l'etude de faisabilite proposee. "
+        "L'analyse multicritere a ete effectuee en temps reel via le moteur d'inference "
+        "EcoMetal Selector Pro, en s'appuyant sur notre base de donnees industrielle. "
+        "Cet outil d'aide a la decision permet aux bureaux d'etudes de se conformer "
+        "aux exigences strictes des cahiers des charges tout en accelerant la transition "
+        "ecologique de leur chaine d'approvisionnement."
+    )
+    pdf.multi_cell(0, 5, footer_text, align="J")
     
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
@@ -226,19 +254,29 @@ with tab1:
         meilleur_choix = df_alt.iloc[0]
         st.success(f"### 🎉 Alternative recommandée : **{meilleur_choix['Nom']}**")
         
+        # --- BLOC DE MÉTRIQUES DE GAINS (Restauré) ---
+        gain_co2 = ((row_ref['Empreinte_CO2'] - meilleur_choix['Empreinte_CO2']) / row_ref['Empreinte_CO2']) * 100
+        gain_prix = ((row_ref['Prix_euro_kg'] - meilleur_choix['Prix_euro_kg']) / row_ref['Prix_euro_kg']) * 100
+        diff_score = meilleur_choix['Score_Eco'] - row_ref['Score_Eco']
+        
+        col_gain1, col_gain2, col_gain3 = st.columns(3)
+        col_gain1.metric("Nouvelle Empreinte CO₂", f"{meilleur_choix['Empreinte_CO2']} kg/kg", f"-{gain_co2:.1f}% CO₂", delta_color="inverse")
+        col_gain2.metric("Nouveau Prix", f"{meilleur_choix['Prix_euro_kg']} €/kg", f"{'-' if gain_prix > 0 else '+'}{abs(gain_prix):.1f}% coût", delta_color="inverse")
+        col_gain3.metric("Nouveau Score Éco", f"{meilleur_choix['Score_Eco']} /100", f"{'+' if diff_score >= 0 else ''}{diff_score} pts")
+        
+        st.write("---")
+        
         # --- L'ATOUT VISUEL : GRAPHIQUE RADAR ---
         st.markdown("### 🕸️ Comparaison des profils de performance")
         categories = ['Résistance (Re)', 'Rigidité (Young)', 'Éco-Score', 'Légèreté (Inv. Densité)', 'Économie (Inv. Prix)']
         
-        # Normalisation pour que la référence soit toujours un pentagone parfait à 100%
-        # Pour Légèreté et Économie, "plus petit" est "mieux", donc on inverse le ratio.
         vals_ref = [100, 100, 100, 100, 100]
         vals_alt = [
             (meilleur_choix['Limite_Elastique_MPa'] / row_ref['Limite_Elastique_MPa']) * 100,
             (meilleur_choix['Module_Young_GPa'] / row_ref['Module_Young_GPa']) * 100,
             (meilleur_choix['Score_Eco'] / row_ref['Score_Eco']) * 100 if row_ref['Score_Eco'] > 0 else 100,
-            (row_ref['Densite'] / meilleur_choix['Densite']) * 100,       # Moins dense = Mieux
-            (row_ref['Prix_euro_kg'] / meilleur_choix['Prix_euro_kg']) * 100 # Moins cher = Mieux
+            (row_ref['Densite'] / meilleur_choix['Densite']) * 100,       
+            (row_ref['Prix_euro_kg'] / meilleur_choix['Prix_euro_kg']) * 100 
         ]
         
         fig = go.Figure()
@@ -249,8 +287,6 @@ with tab1:
 
         # --- Bouton PDF ---
         if HAS_FPDF:
-            gain_co2 = ((row_ref['Empreinte_CO2'] - meilleur_choix['Empreinte_CO2']) / row_ref['Empreinte_CO2']) * 100
-            gain_prix = ((row_ref['Prix_euro_kg'] - meilleur_choix['Prix_euro_kg']) / row_ref['Prix_euro_kg']) * 100
             pdf_bytes = generer_pdf(row_ref, meilleur_choix, gain_co2, gain_prix)
             st.download_button("📄 Télécharger le Rapport d'Audit (PDF)", data=pdf_bytes, file_name=f"Rapport_Substitution.pdf", mime="application/pdf", type="primary")
             
