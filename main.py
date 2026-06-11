@@ -183,9 +183,14 @@ def generer_pdf_etude(df_top, criteres, type_indice):
 # --- INTERFACE UTILISATEUR ---
 st.title("🌱 EcoMetal Selector Pro")
 
-with st.expander("👋 Comment utiliser cette plateforme ?"):
-    st.markdown("* **Étape 1 :** Filtrez par famille à gauche.\n* **Étape 2 :** Onglet *Substitution* pour le jumeau numérique.\n* **Étape 3 :** Onglet *Étude* pour le cahier des charges complet.")
-
+with st.expander("👋 Comment utiliser cette plateforme ? (Guide Rapide)"):
+    st.markdown("""
+    * **Étape 1 :** Utilisez le menu latéral pour cibler une famille de matériaux.
+    * **Étape 2 :** Onglet *Substitution* pour trouver un jumeau numérique responsable en ajustant vos tolérances.
+    * **💡 Astuce Pro (Simulation Pièce) :** Activez l'interrupteur de simulation pour entrer le poids de votre pièce actuelle. L'algorithme calculera l'allègement exact généré par la différence de densité des matériaux, vous donnant l'impact CO₂ et financier réel !
+    * **Étape 3 :** Onglet *Étude* pour définir un cahier des charges strict et exporter les meilleurs candidats.
+    """)
+    
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2942/2942232.png", width=80) 
     st.header("⚙️ Configuration")
