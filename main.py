@@ -59,7 +59,7 @@ def charger_donnees():
 df_initial = charger_donnees()
 colonnes_brutes_affichage = list(DISPLAY_MAP.keys())
 
-# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION ---
+# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION (VERSION DÉTAILLÉE) ---
 def generer_pdf(ref, alt, gain_co2, gain_prix):
     pdf = FPDF()
     pdf.add_page()
@@ -76,38 +76,52 @@ def generer_pdf(ref, alt, gain_co2, gain_prix):
     pdf.cell(0, 6, f"Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')} par EcoMetal Selector Pro", ln=True, align="R")
     pdf.ln(8)
     
+    # MATÉRIAU ACTUEL
     pdf.set_text_color(*NOIR)
-    pdf.set_font("Arial", 'B', 14)
+    pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(230, 230, 230)
-    pdf.cell(0, 10, "  1. ANALYSE DU MATERIAU ACTUEL", ln=True, fill=True)
-    pdf.set_font("Arial", '', 11)
-    pdf.ln(3)
-    pdf.cell(0, 6, f"   * Nom de l'alliage : {ref['Nom']} ({ref['Famille']})", ln=True)
-    pdf.cell(0, 6, f"   * Score Eco : {ref['Score_Eco']} / 100 | CO2 : {ref['Empreinte_CO2']} kg/kg | Prix : {ref['Prix_euro_kg']} EUR/kg", ln=True)
+    pdf.cell(0, 8, f"  1. MATERIAU DE REFERENCE : {ref['Nom']} ({ref['Famille']})", ln=True, fill=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.ln(2)
+    pdf.cell(0, 5, f"   - Mecanique : Limite Elastique (Re) = {ref['Limite_Elastique_MPa']} MPa | Module de Young (E) = {ref['Module_Young_GPa']} GPa", ln=True)
+    pdf.cell(0, 5, f"   - Physique & Thermique : Densite = {ref['Densite']} kg/m3 | Fusion = {ref['Temp_Fusion_C']} C | Cond. Thermique = {ref['Conductivite_Thermique_W_mK']} W/m.K", ln=True)
+    pdf.cell(0, 5, f"   - RSE & Cout : CO2 = {ref['Empreinte_CO2']} kg/kg | Recyclabilite = {ref['Recyclabilite_pct']} % | Prix = {ref['Prix_euro_kg']} EUR/kg", ln=True)
+    pdf.cell(0, 5, f"   - Score Global Eco-Conception : {ref['Score_Eco']} / 100", ln=True)
     pdf.ln(5)
     
-    pdf.set_font("Arial", 'B', 14)
+    # ALTERNATIVE
+    pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(200, 240, 200)
-    pdf.cell(0, 10, "  2. ALTERNATIVE RECOMMANDEE", ln=True, fill=True)
-    pdf.set_font("Arial", '', 11)
-    pdf.ln(3)
-    pdf.cell(0, 6, f"   * Nom de l'alliage : {alt['Nom']} ({alt['Famille']})", ln=True)
-    pdf.cell(0, 6, f"   * Score Eco : {alt['Score_Eco']} / 100 | CO2 : {alt['Empreinte_CO2']} kg/kg | Prix : {alt['Prix_euro_kg']} EUR/kg", ln=True)
+    pdf.cell(0, 8, f"  2. ALTERNATIVE RECOMMANDEE : {alt['Nom']} ({alt['Famille']})", ln=True, fill=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.ln(2)
+    pdf.cell(0, 5, f"   - Mecanique : Limite Elastique (Re) = {alt['Limite_Elastique_MPa']} MPa | Module de Young (E) = {alt['Module_Young_GPa']} GPa", ln=True)
+    pdf.cell(0, 5, f"   - Physique & Thermique : Densite = {alt['Densite']} kg/m3 | Fusion = {alt['Temp_Fusion_C']} C | Cond. Thermique = {alt['Conductivite_Thermique_W_mK']} W/m.K", ln=True)
+    pdf.cell(0, 5, f"   - RSE & Cout : CO2 = {alt['Empreinte_CO2']} kg/kg | Recyclabilite = {alt['Recyclabilite_pct']} % | Prix = {alt['Prix_euro_kg']} EUR/kg", ln=True)
+    pdf.cell(0, 5, f"   - Score Global Eco-Conception : {alt['Score_Eco']} / 100", ln=True)
     pdf.ln(5)
     
-    pdf.set_font("Arial", 'B', 14)
+    # BILAN
+    pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(255, 240, 200)
-    pdf.cell(0, 10, "  3. BILAN DETAILLE DES GAINS", ln=True, fill=True)
-    pdf.set_font("Arial", '', 11)
-    pdf.ln(3)
-    pdf.cell(0, 8, f"   -> Environnement : {ref['Empreinte_CO2'] - alt['Empreinte_CO2']:.2f} kg CO2/kg economises", ln=True)
-    pdf.cell(0, 8, f"   -> Economie : {ref['Prix_euro_kg'] - alt['Prix_euro_kg']:.2f} EUR/kg economises", ln=True)
-    pdf.cell(0, 8, f"   -> Score RSE : +{alt['Score_Eco'] - ref['Score_Eco']} points", ln=True)
+    pdf.cell(0, 8, "  3. BILAN DETAILLE DES COMPROMIS", ln=True, fill=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.ln(2)
     
-    # --- FOOTER MARKETING SUBSTITUTION ---
-    pdf.ln(15)
+    diff_re = alt['Limite_Elastique_MPa'] - ref['Limite_Elastique_MPa']
+    diff_densite = alt['Densite'] - ref['Densite']
+    diff_co2 = ref['Empreinte_CO2'] - alt['Empreinte_CO2']
+    diff_prix = ref['Prix_euro_kg'] - alt['Prix_euro_kg']
+    
+    pdf.cell(0, 6, f"   -> Resistance Mecanique (Re) : {'+' if diff_re > 0 else ''}{diff_re} MPa", ln=True)
+    pdf.cell(0, 6, f"   -> Impact Poids (Densite) : {'+' if diff_densite > 0 else ''}{diff_densite} kg/m3", ln=True)
+    pdf.cell(0, 6, f"   -> Environnement : {'-' if diff_co2 > 0 else '+'}{abs(diff_co2):.2f} kg CO2/kg", ln=True)
+    pdf.cell(0, 6, f"   -> Economie : {'-' if diff_prix > 0 else '+'}{abs(diff_prix):.2f} EUR/kg", ln=True)
+    pdf.cell(0, 6, f"   -> Bilan RSE Global : +{alt['Score_Eco'] - ref['Score_Eco']} points de Score Eco-Conception", ln=True)
+    
+    pdf.ln(10)
     pdf.set_text_color(*GRIS)
-    pdf.set_font("Arial", 'I', 10)
+    pdf.set_font("Arial", 'I', 9)
     footer_text = (
         "Ce document certifie la pertinence de la substitution metallurgique proposee. "
         "L'analyse croisee a ete effectuee en temps reel via le moteur d'inference "
@@ -116,12 +130,12 @@ def generer_pdf(ref, alt, gain_co2, gain_prix):
         "aux exigences mecaniques tout en accelerant la transition ecologique de leur "
         "chaine d'approvisionnement."
     )
-    pdf.multi_cell(0, 5, footer_text, align="J")
+    pdf.multi_cell(0, 4, footer_text, align="J")
     
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
-# --- GÉNÉRATEUR PDF 2 : CAHIER DES CHARGES ---
-def generer_pdf_etude(df_top, criteres):
+# --- GÉNÉRATEUR PDF 2 : CAHIER DES CHARGES (VERSION DÉTAILLÉE) ---
+def generer_pdf_etude(df_top, criteres, type_indice):
     pdf = FPDF()
     pdf.add_page()
     NOIR, GRIS = (30, 30, 30), (100, 100, 100)
@@ -135,50 +149,52 @@ def generer_pdf_etude(df_top, criteres):
     pdf.set_text_color(*GRIS)
     pdf.set_font("Arial", 'I', 10)
     pdf.cell(0, 6, f"Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')} par EcoMetal Selector Pro", ln=True, align="R")
-    pdf.ln(8)
-    
-    pdf.set_text_color(*NOIR)
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_fill_color(230, 230, 230)
-    pdf.cell(0, 10, "  1. RAPPEL DES CONTRAINTES DU PROJET", ln=True, fill=True)
-    pdf.set_font("Arial", '', 11)
-    pdf.ln(3)
-    for cle, valeur in criteres.items():
-        pdf.cell(0, 6, f"   * {cle} : {valeur}", ln=True)
     pdf.ln(5)
     
-    pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(*NOIR)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_fill_color(230, 230, 230)
+    pdf.cell(0, 8, "  1. RAPPEL DU CAHIER DES CHARGES", ln=True, fill=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.ln(2)
+    for cle, valeur in criteres.items():
+        pdf.cell(0, 5, f"   * {cle} : {valeur}", ln=True)
+    pdf.cell(0, 5, f"   * Strategie d'allegement (Ashby) : {type_indice}", ln=True)
+    pdf.ln(5)
+    
+    pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(200, 220, 255)
-    pdf.cell(0, 10, "  2. LE TOP 5 DES MEILLEURS CANDIDATS", ln=True, fill=True)
-    pdf.set_font("Arial", '', 11)
+    pdf.cell(0, 8, "  2. TOP 5 DES MEILLEURS CANDIDATS DETAILLES", ln=True, fill=True)
     pdf.ln(3)
     
     for i, (_, row) in enumerate(df_top.head(5).iterrows(), 1):
+        pdf.set_text_color(25, 118, 210)
         pdf.set_font("Arial", 'B', 11)
         pdf.cell(0, 6, f"  #{i} - {row['Nom']} ({row['Famille']})", ln=True)
-        pdf.set_font("Arial", '', 10)
-        pdf.cell(0, 5, f"        Re: {row['Limite_Elastique_MPa']} MPa | CO2: {row['Empreinte_CO2']} kg | Prix: {row['Prix_euro_kg']} EUR | Score: {row['Score_Eco']}/100", ln=True)
-        pdf.ln(2)
+        pdf.set_text_color(*NOIR)
+        pdf.set_font("Arial", '', 9)
+        pdf.cell(0, 4, f"        Mecanique : Re = {row['Limite_Elastique_MPa']} MPa | E = {row['Module_Young_GPa']} GPa | Densite = {row['Densite']} kg/m3", ln=True)
+        pdf.cell(0, 4, f"        Thermique : Fusion = {row['Temp_Fusion_C']} C | Cond. Thermique = {row['Conductivite_Thermique_W_mK']} W/m.K", ln=True)
+        pdf.cell(0, 4, f"        RSE & Cout : CO2 = {row['Empreinte_CO2']} kg | Prix = {row['Prix_euro_kg']} EUR | Score = {row['Score_Eco']}/100 | Recyc. = {row['Recyclabilite_pct']}%", ln=True)
+        pdf.ln(3)
         
-    pdf.ln(5)
-    pdf.set_font("Arial", 'B', 14)
+    pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(255, 240, 200)
-    pdf.cell(0, 10, "  3. RECOMPENSES & SPECIFICITES", ln=True, fill=True)
-    pdf.set_font("Arial", '', 11)
-    pdf.ln(3)
+    pdf.cell(0, 8, "  3. RECOMPENSES DU PANEL", ln=True, fill=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.ln(2)
     
     best_co2 = df_top.loc[df_top['Empreinte_CO2'].idxmin()]
     best_prix = df_top.loc[df_top['Prix_euro_kg'].idxmin()]
     best_re = df_top.loc[df_top['Limite_Elastique_MPa'].idxmax()]
     
-    pdf.cell(0, 7, f"   -> Le plus ecologique : {best_co2['Nom']} ({best_co2['Empreinte_CO2']} kg CO2/kg)", ln=True)
-    pdf.cell(0, 7, f"   -> Le plus economique : {best_prix['Nom']} ({best_prix['Prix_euro_kg']} EUR/kg)", ln=True)
-    pdf.cell(0, 7, f"   -> Le plus resistant : {best_re['Nom']} ({best_re['Limite_Elastique_MPa']} MPa)", ln=True)
+    pdf.cell(0, 6, f"   -> Champion Ecologique : {best_co2['Nom']} ({best_co2['Empreinte_CO2']} kg CO2/kg)", ln=True)
+    pdf.cell(0, 6, f"   -> Champion Economique : {best_prix['Nom']} ({best_prix['Prix_euro_kg']} EUR/kg)", ln=True)
+    pdf.cell(0, 6, f"   -> Champion Mecanique : {best_re['Nom']} (Re = {best_re['Limite_Elastique_MPa']} MPa)", ln=True)
     
-    # --- FOOTER MARKETING ÉTUDE ---
-    pdf.ln(15)
+    pdf.ln(10)
     pdf.set_text_color(*GRIS)
-    pdf.set_font("Arial", 'I', 10)
+    pdf.set_font("Arial", 'I', 9)
     footer_text = (
         "Ce document certifie la pertinence de l'etude de faisabilite proposee. "
         "L'analyse multicritere a ete effectuee en temps reel via le moteur d'inference "
@@ -187,7 +203,7 @@ def generer_pdf_etude(df_top, criteres):
         "aux exigences strictes des cahiers des charges tout en accelerant la transition "
         "ecologique de leur chaine d'approvisionnement."
     )
-    pdf.multi_cell(0, 5, footer_text, align="J")
+    pdf.multi_cell(0, 4, footer_text, align="J")
     
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
@@ -254,7 +270,6 @@ with tab1:
         meilleur_choix = df_alt.iloc[0]
         st.success(f"### 🎉 Alternative recommandée : **{meilleur_choix['Nom']}**")
         
-        # --- BLOC DE MÉTRIQUES DE GAINS (Restauré) ---
         gain_co2 = ((row_ref['Empreinte_CO2'] - meilleur_choix['Empreinte_CO2']) / row_ref['Empreinte_CO2']) * 100
         gain_prix = ((row_ref['Prix_euro_kg'] - meilleur_choix['Prix_euro_kg']) / row_ref['Prix_euro_kg']) * 100
         diff_score = meilleur_choix['Score_Eco'] - row_ref['Score_Eco']
@@ -266,7 +281,6 @@ with tab1:
         
         st.write("---")
         
-        # --- L'ATOUT VISUEL : GRAPHIQUE RADAR ---
         st.markdown("### 🕸️ Comparaison des profils de performance")
         categories = ['Résistance (Re)', 'Rigidité (Young)', 'Éco-Score', 'Légèreté (Inv. Densité)', 'Économie (Inv. Prix)']
         
@@ -285,7 +299,6 @@ with tab1:
         fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(max(vals_alt), 120)])), showlegend=True, height=400, margin=dict(t=20, b=20))
         st.plotly_chart(fig, use_container_width=True)
 
-        # --- Bouton PDF ---
         if HAS_FPDF:
             pdf_bytes = generer_pdf(row_ref, meilleur_choix, gain_co2, gain_prix)
             st.download_button("📄 Télécharger le Rapport d'Audit (PDF)", data=pdf_bytes, file_name=f"Rapport_Substitution.pdf", mime="application/pdf", type="primary")
@@ -327,15 +340,15 @@ with tab2:
     st.subheader(f"📊 {len(df_filtre)} matériau(x) valide(s)")
     
     if not df_filtre.empty:
-        # --- BOUTON PDF POUR L'ONGLET 2 ---
         if HAS_FPDF:
             criteres_actuels = {
                 "Re minimum": f"{limite_elastique_min} MPa",
                 "Young minimum": f"{module_young_min} GPa",
+                "Temp. Fusion minimum": f"{temp_fusion_min} C",
                 "CO2 maximum": f"{empreinte_co2_max} kg/kg",
                 "Prix maximum": f"{prix_max} EUR/kg"
             }
-            pdf_etude = generer_pdf_etude(df_filtre, criteres_actuels)
+            pdf_etude = generer_pdf_etude(df_filtre, criteres_actuels, type_indice)
             st.download_button("📄 Télécharger l'Étude de Faisabilité (PDF)", data=pdf_etude, file_name="Etude_Faisabilite_Materiaux.pdf", mime="application/pdf", type="primary")
 
         st.dataframe(df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP).head(20), use_container_width=True)
