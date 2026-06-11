@@ -31,7 +31,7 @@ DISPLAY_MAP = {
 # --- CHARGEMENT ET PRÉPARATION DES DONNÉES ---
 @st.cache_data
 def charger_donnees():
-    df = pd.read_csv('alliages_metalliques_4.csv', sep=';')
+    df = pd.read_csv('alliages_metalliques_4_1.csv', sep=';')
     
     if 'Famille' not in df.columns:
         df['Famille'] = 'Non spécifié'
