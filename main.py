@@ -14,7 +14,7 @@ except ImportError:
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="MatSwap", page_icon="🔄", layout="wide")
 
-# --- TITRE SAAS PREMIUM ET STYLISATION DES BOUTONS (CSS) ---
+# --- TITRE SAAS PREMIUM ET STYLISATION DES BOUTONS (CSS BLINDÉ) ---
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght=700;800&display=swap');
@@ -39,16 +39,30 @@ st.markdown("""
             margin-top: 5px;
         }
         
-        /* Force UNIQUEMENT les boutons de téléchargement secondaires (Excel/CSV) en vert */
-        div.stDownloadButton > button[data-testid="baseButton-secondary"] {
+        /* FORCE LE BOUTON DE LA 1ÈRE COLONNE EN BLEU (PDF) */
+        div[data-testid="column"]:nth-child(1) div.stDownloadButton button {
+            background-color: #2563EB !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 6px !important;
+            padding: 0.5rem 1rem !important;
+        }
+        div[data-testid="column"]:nth-child(1) div.stDownloadButton button:hover {
+            background-color: #1D4ED8 !important;
+            color: white !important;
+        }
+        
+        /* FORCE LE BOUTON DE LA 2ÈME COLONNE EN VERT (EXCEL / CSV) */
+        div[data-testid="column"]:nth-child(2) div.stDownloadButton button {
             background-color: #10B981 !important;
             color: white !important;
             border: none !important;
+            border-radius: 6px !important;
+            padding: 0.5rem 1rem !important;
         }
-        div.stDownloadButton > button[data-testid="baseButton-secondary"]:hover {
+        div[data-testid="column"]:nth-child(2) div.stDownloadButton button:hover {
             background-color: #059669 !important;
             color: white !important;
-            border: none !important;
         }
     </style>
     <div class='main-title-container'>🔄 <span class='text-gradient'>MatSwap</span></div>
@@ -68,7 +82,7 @@ DISPLAY_MAP = {
 HELP_RE = "Limite Élastique (Re) : Contrainte maximale avant déformation irréversible."
 HELP_YOUNG = "Module de Young (E) : Mesure la rigidité. Plus il élevé, moins la pièce fléchira."
 HELP_DURETE = "Dureté Rockwell (C) : Résistance à la pénétration. Crucial pour l'usure et le frottement."
-HELP_CO2 = "Kilos de CO₂ émis pour produire 1 kg de cet alliage."
+HELP_CO2 = "Kilos de CO₂ émis pour Unicodeproduire 1 kg de cet alliage."
 HELP_PRIX = "Prix estimatif sur le marché industriel européen."
 HELP_SCORE = "Note sur 100 valorisant les matériaux bas carbone et hautement recyclables."
 
@@ -275,16 +289,11 @@ def generer_pdf_etude(df_top, criteres, type_indice, fig_radar, fig_ashby):
         
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
-# --- INTERFACE UTILISATEUR ---
-with st.expander("👋 Guide Rapide de MatSwap"):
-    st.markdown("""
-    * **Étape 1 :** Utilisez le menu latéral pour cibler une famille de matériaux.
-    * **Étape 2 :** Choisissez votre Objectif principal dans la configuration : réduire l'empreinte CO₂, réduire le prix, ou trouver le compromis idéal grâce à une Pondération mixte personnalisée (%).
-    * **Étape 3 :** Onglet *Substitution* pour comparer instantanément les **3 meilleures alternatives** calculées selon vos critères.
-    * **💡 Astuce Pro :** Activez la simulation sur pièce réelle pour calculer l'allègement exact (en kg) de votre pièce mécanique !
-    * **Étape 4 :** Onglet *Étude* pour définir un cahier des charges strict et exporter les candidats.
-    """)
+# --- CHARGEMENT DE LA BASE DE DONNÉES ---
+df_initial = charger_donnees()
+colonnes_brutes_affichage = list(DISPLAY_MAP.keys())
 
+# --- INTERFACE FLUIDE ---
 with st.sidebar:
     st.header("⚙️ Configuration")
     famille_choisie = st.selectbox("Filtrer par famille :", ['Toutes'] + sorted(df_initial['Famille'].unique().tolist()))
@@ -450,7 +459,7 @@ with tab1:
             )
             st.plotly_chart(fig_ashby, use_container_width=True)
 
-        # --- TELECHARGEMENT EN PDF (BLEU) ET CSV (VERT) ALIGNES ---
+        # --- BLOC D'EXPORTATION ---
         st.write("---")
         col_pdf, col_csv = st.columns(2)
         
@@ -462,7 +471,6 @@ with tab1:
                     data=pdf_bytes, 
                     file_name="Rapport_Substitution_MatSwap.pdf", 
                     mime="application/pdf", 
-                    type="primary", 
                     use_container_width=True
                 )
         
@@ -575,7 +583,7 @@ with tab2:
             )
             st.plotly_chart(fig_ashby_e, use_container_width=True)
 
-        # --- TELECHARGEMENT EN PDF (BLEU) ET CSV (VERT) ALIGNES POUR L'ONGLET 2 ---
+        # --- SECTIONS DES EXPORTS DE L'ONGLET 2 ---
         st.write("---")
         c_btn1, c_btn2 = st.columns(2)
         
@@ -596,7 +604,6 @@ with tab2:
                     data=pdf_etude, 
                     file_name="Etude_Faisabilite.pdf", 
                     mime="application/pdf", 
-                    type="primary", 
                     use_container_width=True
                 )
 
