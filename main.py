@@ -17,7 +17,7 @@ st.set_page_config(page_title="MatSwap", page_icon="🔄", layout="wide")
 # --- TITRE SAAS PREMIUM (CSS) ---
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght=700;800&display=swap');
         .main-title-container {
             font-family: 'Poppins', sans-serif;
             font-size: 3.5rem;
@@ -90,7 +90,6 @@ GLOBAL_MINS = df_initial[['Limite_Elastique_MPa', 'Module_Young_GPa', 'Score_Eco
 GLOBAL_MAXS = df_initial[['Limite_Elastique_MPa', 'Module_Young_GPa', 'Score_Eco', 'Densite', 'Prix_euro_kg']].max()
 
 def obtenir_profil_radar(row):
-    # Fonction de normalisation (on garde un fond à 10 pour éviter que le graphique s'effondre au centre)
     def norm_plus(val, col):
         span = GLOBAL_MAXS[col] - GLOBAL_MINS[col]
         return 10 + 90 * (val - GLOBAL_MINS[col]) / span if span > 0 else 50
@@ -102,8 +101,8 @@ def obtenir_profil_radar(row):
         norm_plus(row['Limite_Elastique_MPa'], 'Limite_Elastique_MPa'),
         norm_plus(row['Module_Young_GPa'], 'Module_Young_GPa'),
         norm_plus(row['Score_Eco'], 'Score_Eco'),
-        norm_moins(row['Densite'], 'Densite'),      # Moins dense = Meilleur score sur le radar
-        norm_moins(row['Prix_euro_kg'], 'Prix_euro_kg')  # Moins cher = Meilleur score sur le radar
+        norm_moins(row['Densite'], 'Densite'),      
+        norm_moins(row['Prix_euro_kg'], 'Prix_euro_kg')  
     ]
 
 # --- GÉNÉRATEUR PDF 1 : SUBSTITUTION ---
@@ -214,21 +213,37 @@ def generer_pdf_etude(df_top, criteres, type_indice):
         
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
-# --- INTERFACE UTILISATEUR ---
+# --- INTERFACE UTILISATEUR (GUIDE MIS À JOUR) ---
 with st.expander("👋 Guide Rapide de MatSwap"):
     st.markdown("""
     * **Étape 1 :** Utilisez le menu latéral pour cibler une famille de matériaux.
-    * **Étape 2 :** Onglet *Substitution* pour trouver les **3 meilleures alternatives** (Jumeaux Numériques).
-    * **💡 Astuce Pro :** Activez la simulation sur pièce réelle pour calculer l'allègement exact (en kg) de votre pièce !
-    * **Étape 3 :** Onglet *Étude* pour définir un cahier des charges strict et exporter les candidats.
+    * **Étape 2 (Nouveau) :** Choisissez votre **Objectif principal** dans la configuration : réduire l'empreinte CO₂, réduire le prix, ou trouver le compromis idéal grâce à une **Pondération mixte personnalisée (%)**.
+    * **Étape 3 :** Onglet *Substitution* pour comparer instantanément les **3 meilleures alternatives** calculées selon vos critères.
+    * **💡 Astuce Pro :** Activez la simulation sur pièce réelle pour calculer l'allègement exact (en kg) de votre pièce mécanique !
+    * **Étape 4 :** Onglet *Étude* pour définir un cahier des charges strict et exporter les candidats.
     """)
 
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2942/2942232.png", width=80) 
     st.header("⚙️ Configuration")
     famille_choisie = st.selectbox("Filtrer par famille :", ['Toutes'] + sorted(df_initial['Famille'].unique().tolist()))
-    st.markdown("### 🎯 Optimisation")
-    objectif = st.radio("Objectif principal :", ["Réduire l'empreinte CO₂", "Réduire le prix (€/kg)"])
+    
+    st.markdown("### 🎯 Stratégie d'Optimisation")
+    # Ajout de l'option "mixte"
+    objectif = st.radio(
+        "Objectif principal :", 
+        ["Réduire l'empreinte CO₂", "Réduire le prix (€/kg)", "Optimisation mixte (Pondérée)"]
+    )
+    
+    # Si optimisation mixte, on affiche les curseurs de pourcentage
+    poids_co2 = 50
+    poids_prix = 50
+    if objectif == "Optimisation mixte (Pondérée)":
+        st.write("---")
+        st.markdown("**⚖️ Ajustement des poids :**")
+        poids_co2 = st.slider("Importance Écologique (%)", 0, 100, 50, step=5)
+        poids_prix = 100 - poids_co2
+        st.caption(f"➔ Importance Économique : **{poids_prix}%**")
 
 df_recherche = df_initial[df_initial['Famille'] == famille_choisie] if famille_choisie != 'Toutes' else df_initial
 tab1, tab2 = st.tabs(["🔄 Substitution (Top 3 Scénarios)", "📐 Étude & Cahier des Charges"])
@@ -263,13 +278,31 @@ with tab1:
     
     st.write("---")
 
+    # Filtrage de base selon la mécanique
     df_alt = df_initial[df_initial['Nom'] != materiau_ref].copy()
     if keep_mecha: df_alt = df_alt[df_alt['Limite_Elastique_MPa'] >= row_ref['Limite_Elastique_MPa'] * (1 - (tol_mecha / 100))]
     if keep_thermal: df_alt = df_alt[df_alt['Temp_Fusion_C'] >= row_ref['Temp_Fusion_C'] * (1 - (tol_thermal / 100))]
     if keep_stiff: df_alt = df_alt[df_alt['Module_Young_GPa'] >= row_ref['Module_Young_GPa'] * (1 - (tol_stiff / 100))]
         
-    if objectif == "Réduire l'empreinte CO₂": df_alt = df_alt.sort_values(by='Empreinte_CO2')
-    else: df_alt = df_alt.sort_values(by='Prix_euro_kg')
+    # --- LOGIQUE DE TRI MULTICRITÈRE PONDÉRÉ ---
+    if objectif == "Réduire l'empreinte CO₂": 
+        df_alt = df_alt.sort_values(by='Empreinte_CO2')
+    elif objectif == "Réduire le prix (€/kg)": 
+        df_alt = df_alt.sort_values(by='Prix_euro_kg')
+    else:
+        # Algorithme Mixte : Normalisation locale de 0 à 1 pour faire le calcul
+        min_co2, max_co2 = df_alt['Empreinte_CO2'].min(), df_alt['Empreinte_CO2'].max()
+        min_prix, max_prix = df_alt['Prix_euro_kg'].min(), df_alt['Prix_euro_kg'].max()
+        
+        span_co2 = max_co2 - min_co2 if max_co2 != min_co2 else 1
+        span_prix = max_prix - min_prix if max_prix != min_prix else 1
+        
+        # Calcul du score combiné (plus le score est bas, plus le matériau coche les critères)
+        df_alt['Score_Mixte'] = (
+            (poids_co2 / 100) * ((df_alt['Empreinte_CO2'] - min_co2) / span_co2) +
+            (poids_prix / 100) * ((df_alt['Prix_euro_kg'] - min_prix) / span_prix)
+        )
+        df_alt = df_alt.sort_values(by='Score_Mixte')
 
     if not df_alt.empty:
         top_alternatives = df_alt.head(3)
@@ -300,8 +333,6 @@ with tab1:
         categories = ['Résistance (Re)', 'Rigidité (E)', 'Éco-Score', 'Légèreté (Inv. ρ)', 'Économie (Inv. €)']
         
         fig = go.Figure()
-        
-        # 1. Profil du Matériau de Référence (Gris Ardoise - Trait épais)
         vals_ref = obtenir_profil_radar(row_ref)
         fig.add_trace(go.Scatterpolar(
             r=vals_ref, theta=categories, fill='toself', 
@@ -309,7 +340,6 @@ with tab1:
             line=dict(color='#64748B', width=4)
         ))
         
-        # 3 couleurs claires, distinctes et épaisses pour les alternatives
         colors = ['#2563EB', '#10B981', '#8B5CF6']
         for idx, alt in top_alternatives.iterrows():
             pos = list(top_alternatives.index).index(idx)
@@ -317,11 +347,10 @@ with tab1:
             
             fig.add_trace(go.Scatterpolar(
                 r=vals_alt, theta=categories, fill='toself', 
-                name=f"###{pos+1} {alt['Nom']}", 
+                name=f"#{pos+1} {alt['Nom']}", 
                 line=dict(color=colors[pos], width=3)
             ))
             
-        # L'échelle est désormais proprement fixée de 0 à 100 selon les limites de ta base
         fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=True, height=500, margin=dict(t=20, b=20))
         st.plotly_chart(fig, use_container_width=True)
 
