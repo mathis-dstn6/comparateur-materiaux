@@ -14,6 +14,76 @@ except ImportError:
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="EcoMetal Selector Pro", page_icon="🌱", layout="wide")
 
+# --- INJECTION DE LA CHARTE GRAPHIQUE SAAS (BLEU & BLANC) ---
+st.markdown("""
+    <style>
+        /* Fond global de l'application (Blanc/Gris clair épuré) */
+        html, body, [data-testid="stAppViewContainer"] {
+            background-color: #F8FAFC !important;
+            color: #334155 !important;
+        }
+        
+        /* En-têtes et Titres en Bleu Industriel Profond */
+        h1, h2, h3, h4, h5, h6 {
+            color: #1E3A8A !important;
+            font-family: 'Inter', 'Segoe UI', sans-serif !important;
+            font-weight: 700 !important;
+        }
+        
+        /* Barre latérale Premium (Bleu Nuit/Sombre pour le contraste) */
+        [data-testid="stSidebar"] {
+            background-color: #0F172A !important;
+            color: #F1F5F9 !important;
+        }
+        [data-testid="stSidebar"] * {
+            color: #F1F5F9 !important;
+        }
+        /* Ajustement des listes déroulantes de la sidebar pour rester lisibles */
+        [data-testid="stSidebar"] div[data-baseweb="select"] * {
+            color: #334155 !important;
+        }
+        
+        /* Boutons d'action en Bleu SaaS Vif */
+        .stButton>button {
+            background-color: #2563EB !important;
+            color: white !important;
+            border-radius: 6px !important;
+            border: none !important;
+            font-weight: 600 !important;
+            padding: 0.5rem 1rem !important;
+            transition: all 0.2s ease;
+        }
+        .stButton>button:hover {
+            background-color: #1D4ED8 !important;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+        }
+        
+        /* Design des blocs de métriques (Effet cartes blanches) */
+        [data-testid="stMetric"] {
+            background-color: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            border-radius: 8px !important;
+            padding: 12px 20px !important;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05) !important;
+        }
+        [data-testid="stMetricValue"] {
+            color: #2563EB !important;
+            font-weight: 700 !important;
+        }
+        
+        /* Style des onglets (Tabs) */
+        button[data-baseweb="tab"] {
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            color: #64748B !important;
+        }
+        button[data-baseweb="tab"][aria-selected="true"] {
+            color: #2563EB !important;
+            border-bottom-color: #2563EB !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- MAPPING ET TOOLTIPS ---
 DISPLAY_MAP = {
     'Nom': 'Nom de l\'Alliage', 'Famille': 'Famille Métallurgique', 'Densite': 'Densité (kg/m³)',
@@ -205,7 +275,6 @@ tab1, tab2 = st.tabs(["🔄 Substitution Intelligente", "📐 Étude & Cahier de
 with tab1:
     col_sel, col_tol = st.columns([1, 2])
     with col_sel:
-        # Tri alphabétique de la liste et mise à jour du label
         liste_materiaux = sorted(df_recherche['Nom'].tolist())
         materiau_ref = st.selectbox("Sélectionnez le matériau de référence (tapez pour chercher) :", liste_materiaux)
         row_ref = df_initial[df_initial['Nom'] == materiau_ref].iloc[0]
@@ -219,7 +288,6 @@ with tab1:
 
     st.write("---")
     
-    # --- LA NOUVELLE FONCTIONNALITÉ : SIMULATION PIÈCE ---
     st.markdown("### 📦 Simulation sur Pièce Réelle (Optionnelle)")
     simuler_piece = st.toggle("Activer le calcul d'impact pour une pièce spécifique", value=False, help="Calcule l'allègement réel en prenant en compte la différence de densité entre les matériaux.")
     
@@ -248,7 +316,6 @@ with tab1:
         meilleur_choix = df_alt.iloc[0]
         st.success(f"### 🎉 Alternative recommandée : **{meilleur_choix['Nom']}**")
         
-        # --- CALCULS AVEC OU SANS PIÈCE ---
         poids_alt = poids_actuel * (meilleur_choix['Densite'] / row_ref['Densite']) if simuler_piece else 1.0
         poids_ref_calc = poids_actuel if simuler_piece else 1.0
         
@@ -272,7 +339,6 @@ with tab1:
         
         st.write("---")
         
-        # --- RADAR CHART ---
         st.markdown("### 🕸️ Comparaison des profils de performance")
         categories = ['Résistance (Re)', 'Rigidité (E)', 'Éco-Score', 'Légèreté (Inv. ρ)', 'Économie (Inv. €)']
         vals_ref = [100, 100, 100, 100, 100]
