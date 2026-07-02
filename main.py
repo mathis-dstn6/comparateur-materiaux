@@ -39,15 +39,16 @@ st.markdown("""
             margin-top: 5px;
         }
         
-        /* Stylisation spécifique pour les boutons Excel/CSV (Vert) */
-        div.stDownloadButton > button:not([data-testid="baseButton-primary"]) {
+        /* Force UNIQUEMENT les boutons de téléchargement secondaires (Excel/CSV) en vert */
+        div.stDownloadButton > button[data-testid="baseButton-secondary"] {
             background-color: #10B981 !important;
             color: white !important;
             border: none !important;
         }
-        div.stDownloadButton > button:not([data-testid="baseButton-primary"]):hover {
+        div.stDownloadButton > button[data-testid="baseButton-secondary"]:hover {
             background-color: #059669 !important;
             color: white !important;
+            border: none !important;
         }
     </style>
     <div class='main-title-container'>🔄 <span class='text-gradient'>MatSwap</span></div>
