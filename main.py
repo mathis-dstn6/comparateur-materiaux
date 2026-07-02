@@ -213,11 +213,11 @@ def generer_pdf_etude(df_top, criteres, type_indice):
         
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
-# --- INTERFACE UTILISATEUR (GUIDE MIS À JOUR) ---
+# --- INTERFACE UTILISATEUR ---
 with st.expander("👋 Guide Rapide de MatSwap"):
     st.markdown("""
     * **Étape 1 :** Utilisez le menu latéral pour cibler une famille de matériaux.
-    * **Étape 2 (Nouveau) :** Choisissez votre **Objectif principal** dans la configuration : réduire l'empreinte CO₂, réduire le prix, ou trouver le compromis idéal grâce à une **Pondération mixte personnalisée (%)**.
+    * **Étape 2 :** Choisissez votre Objectif principal dans la configuration : réduire l'empreinte CO₂, réduire le prix, ou trouver le compromis idéal grâce à une Pondération mixte personnalisée (%).
     * **Étape 3 :** Onglet *Substitution* pour comparer instantanément les **3 meilleures alternatives** calculées selon vos critères.
     * **💡 Astuce Pro :** Activez la simulation sur pièce réelle pour calculer l'allègement exact (en kg) de votre pièce mécanique !
     * **Étape 4 :** Onglet *Étude* pour définir un cahier des charges strict et exporter les candidats.
@@ -229,13 +229,11 @@ with st.sidebar:
     famille_choisie = st.selectbox("Filtrer par famille :", ['Toutes'] + sorted(df_initial['Famille'].unique().tolist()))
     
     st.markdown("### 🎯 Stratégie d'Optimisation")
-    # Ajout de l'option "mixte"
     objectif = st.radio(
         "Objectif principal :", 
         ["Réduire l'empreinte CO₂", "Réduire le prix (€/kg)", "Optimisation mixte (Pondérée)"]
     )
     
-    # Si optimisation mixte, on affiche les curseurs de pourcentage
     poids_co2 = 50
     poids_prix = 50
     if objectif == "Optimisation mixte (Pondérée)":
@@ -278,26 +276,21 @@ with tab1:
     
     st.write("---")
 
-    # Filtrage de base selon la mécanique
     df_alt = df_initial[df_initial['Nom'] != materiau_ref].copy()
     if keep_mecha: df_alt = df_alt[df_alt['Limite_Elastique_MPa'] >= row_ref['Limite_Elastique_MPa'] * (1 - (tol_mecha / 100))]
     if keep_thermal: df_alt = df_alt[df_alt['Temp_Fusion_C'] >= row_ref['Temp_Fusion_C'] * (1 - (tol_thermal / 100))]
     if keep_stiff: df_alt = df_alt[df_alt['Module_Young_GPa'] >= row_ref['Module_Young_GPa'] * (1 - (tol_stiff / 100))]
         
-    # --- LOGIQUE DE TRI MULTICRITÈRE PONDÉRÉ ---
     if objectif == "Réduire l'empreinte CO₂": 
         df_alt = df_alt.sort_values(by='Empreinte_CO2')
     elif objectif == "Réduire le prix (€/kg)": 
         df_alt = df_alt.sort_values(by='Prix_euro_kg')
     else:
-        # Algorithme Mixte : Normalisation locale de 0 à 1 pour faire le calcul
         min_co2, max_co2 = df_alt['Empreinte_CO2'].min(), df_alt['Empreinte_CO2'].max()
         min_prix, max_prix = df_alt['Prix_euro_kg'].min(), df_alt['Prix_euro_kg'].max()
-        
         span_co2 = max_co2 - min_co2 if max_co2 != min_co2 else 1
         span_prix = max_prix - min_prix if max_prix != min_prix else 1
         
-        # Calcul du score combiné (plus le score est bas, plus le matériau coche les critères)
         df_alt['Score_Mixte'] = (
             (poids_co2 / 100) * ((df_alt['Empreinte_CO2'] - min_co2) / span_co2) +
             (poids_prix / 100) * ((df_alt['Prix_euro_kg'] - min_prix) / span_prix)
@@ -329,31 +322,98 @@ with tab1:
         
         st.write("---")
         
-        st.markdown("### 🕸️ Comparaison visuelle des scénarios (Échelle Absolue 0-100)")
-        categories = ['Résistance (Re)', 'Rigidité (E)', 'Éco-Score', 'Légèreté (Inv. ρ)', 'Économie (Inv. €)']
+        # --- MISE EN PAGE DU DASHBOARD GRAPHIQUE (CÔTE À CÔTE) ---
+        st.markdown("### 📊 Analyses Graphiques Avancées")
+        col_radar, col_ashby = st.columns(2)
         
-        fig = go.Figure()
-        vals_ref = obtenir_profil_radar(row_ref)
-        fig.add_trace(go.Scatterpolar(
-            r=vals_ref, theta=categories, fill='toself', 
-            name=f"Réf: {row_ref['Nom']}", 
-            line=dict(color='#64748B', width=4)
-        ))
-        
-        colors = ['#2563EB', '#10B981', '#8B5CF6']
-        for idx, alt in top_alternatives.iterrows():
-            pos = list(top_alternatives.index).index(idx)
-            vals_alt = obtenir_profil_radar(alt)
+        # --- COLONNE GAUCHE : RADAR CHART ---
+        with col_radar:
+            st.markdown("#### 🕸️ Profil de Performance (Échelle Absolue 0-100)")
+            categories = ['Résistance (Re)', 'Rigidité (E)', 'Éco-Score', 'Légèreté (Inv. ρ)', 'Économie (Inv. €)']
             
+            fig = go.Figure()
+            vals_ref = obtenir_profil_radar(row_ref)
             fig.add_trace(go.Scatterpolar(
-                r=vals_alt, theta=categories, fill='toself', 
-                name=f"#{pos+1} {alt['Nom']}", 
-                line=dict(color=colors[pos], width=3)
+                r=vals_ref, theta=categories, fill='toself', 
+                name=f"Réf: {row_ref['Nom']}", 
+                line=dict(color='#64748B', width=4)
             ))
             
-        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=True, height=500, margin=dict(t=20, b=20))
-        st.plotly_chart(fig, use_container_width=True)
+            colors = ['#2563EB', '#10B981', '#8B5CF6']
+            for idx, alt in top_alternatives.iterrows():
+                pos = list(top_alternatives.index).index(idx)
+                vals_alt = obtenir_profil_radar(alt)
+                
+                fig.add_trace(go.Scatterpolar(
+                    r=vals_alt, theta=categories, fill='toself', 
+                    name=f"#{pos+1} {alt['Nom']}", 
+                    line=dict(color=colors[pos], width=3)
+                ))
+                
+            fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=True, height=450, margin=dict(t=20, b=20))
+            st.plotly_chart(fig, use_container_width=True)
 
+        # --- COLONNE DROITE : VERITABLE DIAGRAMME D'ASHBY INTERACTIF ---
+        with col_ashby:
+            st.markdown("#### 📈 Cartographie d'Ashby (vs Résistance Re)")
+            
+            # Sélecteur d'axe X interactif pour l'utilisateur
+            axe_x_choix = st.selectbox(
+                "Sélectionner la variable de l'Axe X :", 
+                ["Densite", "Prix_euro_kg", "Empreinte_CO2"], 
+                format_func=lambda x: DISPLAY_MAP[x]
+            )
+            
+            fig_ashby = go.Figure()
+            
+            # 1. Ajout de TOUS les matériaux du catalogue en tâche de fond (triés par Famille)
+            for famille, group in df_initial.groupby('Famille'):
+                fig_ashby.add_trace(go.Scatter(
+                    x=group[axe_x_choix],
+                    y=group['Limite_Elastique_MPa'],
+                    mode='markers',
+                    name=famille,
+                    marker=dict(size=7, opacity=0.35),
+                    text=group['Nom'],
+                    hovertemplate="<b>%{text}</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
+                ))
+            
+            # 2. Ajout du matériau de référence (Gros Diamant Noir)
+            fig_ashby.add_trace(go.Scatter(
+                x=[row_ref[axe_x_choix]],
+                y=[row_ref['Limite_Elastique_MPa']],
+                mode='markers',
+                name=f"Réf: {row_ref['Nom']}",
+                marker=dict(color='#475569', size=15, symbol='diamond', line=dict(color='white', width=2)),
+                text=[row_ref['Nom']],
+                hovertemplate="<b>%{text} (RÉFÉRENCE)</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
+            ))
+            
+            # 3. Ajout du Top 3 recommandé (Gros points colorés)
+            for idx, alt in top_alternatives.iterrows():
+                pos = list(top_alternatives.index).index(idx)
+                fig_ashby.add_trace(go.Scatter(
+                    x=[alt[axe_x_choix]],
+                    y=[alt['Limite_Elastique_MPa']],
+                    mode='markers',
+                    name=f"#{pos+1} {alt['Nom']}",
+                    marker=dict(color=colors[pos], size=13, symbol='circle', line=dict(color='white', width=2)),
+                    text=[alt['Nom']],
+                    hovertemplate="<b>%{text} (Alternative #"+str(pos+1)+")</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
+                ))
+                
+            fig_ashby.update_layout(
+                xaxis_title=DISPLAY_MAP[axe_x_choix],
+                yaxis_title="Limite Élastique Re (MPa)",
+                showlegend=True,
+                height=400,
+                margin=dict(t=10, b=10),
+                plot_bgcolor='rgba(241,245,249,0.5)',
+                paper_bgcolor='rgba(0,0,0,0)'
+            )
+            st.plotly_chart(fig_ashby, use_container_width=True)
+
+        st.write("---")
         meilleur_choix = top_alternatives.iloc[0]
         if HAS_FPDF:
             poids_alt_best = poids_actuel * (meilleur_choix['Densite'] / row_ref['Densite']) if simuler_piece else 1.0
