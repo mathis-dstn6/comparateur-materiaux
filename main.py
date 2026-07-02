@@ -435,7 +435,8 @@ with tab1:
                     marker=dict(color=colors[pos], size=13, symbol='circle', line=dict(color='white', width=2)), text=[alt['Nom']],
                     hovertemplate="<b>%{text} (Alternative #"+str(pos+1)+")</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
                 ))
-                
+             if not df_alt.empty:
+        top_alternatives = df_alt.head(3)   
             fig_ashby.update_layout(
                 xaxis_title=DISPLAY_MAP[axe_x_choix], yaxis_title="Limite Élastique Re (MPa)", showlegend=True, height=400,
                 margin=dict(t=10, b=10), plot_bgcolor='rgba(241,245,249,0.5)', paper_bgcolor='rgba(0,0,0,0)'
