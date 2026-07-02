@@ -444,32 +444,37 @@ with tab1:
 
         # --- TELECHARGEMENT DU NOUVEAU RAPPORT DE SUBSTITUTION ENRICHI ---
         st.write("---")
-        if HAS_FPDF:
-            # On envoie dorénavant l'ensemble du tableau 'top_alternatives' au lieu du premier choix uniquement
-            pdf_bytes = generer_pdf(
-                row_ref, top_alternatives, simuler_piece, poids_actuel, fig, fig_ashby
+        
+        with col_pdf:
+            if HAS_FPDF:
+                pdf_bytes = generer_pdf(row_ref, top_alternatives, simuler_piece, poids_actuel, fig, fig_ashby)
+                st.download_button(
+                    label="📄 Exporter le Rapport d'Audit (PDF)", 
+                    data=pdf_bytes, 
+                    file_name="Rapport_Substitution_MatSwap.pdf", 
+                    mime="application/pdf", 
+                    use_container_width=True
+                )
+        
+        with col_csv:
+            # Préparation des données pour export
+            df_export_sub = top_alternatives.copy()
+            df_export_sub['Gain_CO2_Pct'] = ((row_ref['Empreinte_CO2'] - df_export_sub['Empreinte_CO2']) / row_ref['Empreinte_CO2']) * 100
+            df_export_sub['Gain_Prix_Pct'] = ((row_ref['Prix_euro_kg'] - df_export_sub['Prix_euro_kg']) / row_ref['Prix_euro_kg']) * 100
+            
+            df_export_sub = df_export_sub[colonnes_brutes_affichage + ['Gain_CO2_Pct', 'Gain_Prix_Pct']].rename(
+                columns={**DISPLAY_MAP, 'Gain_CO2_Pct': 'Gain CO2 (%)', 'Gain_Prix_Pct': 'Gain Prix (%)'}
             )
-            st.download_button("📄 Exporter le Rapport d'Audit Globale (PDF)", data=pdf_bytes, file_name=f"Rapport_Substitution_MatSwap.pdf", mime="application/pdf", type="primary")
-      # --- EXPORT CSV DU TOP 3 (À INSÉRER DANS TAB1) ---
-        # On calcule les gains pour qu'ils apparaissent dans le fichier CSV
-        df_export_sub = top_alternatives.copy()
-        df_export_sub['Gain_CO2_Pct'] = ((row_ref['Empreinte_CO2'] - df_export_sub['Empreinte_CO2']) / row_ref['Empreinte_CO2']) * 100
-        df_export_sub['Gain_Prix_Pct'] = ((row_ref['Prix_euro_kg'] - df_export_sub['Prix_euro_kg']) / row_ref['Prix_euro_kg']) * 100
-        
-        # Renommage des colonnes pour un rendu propre dans Excel
-        df_export_sub = df_export_sub[colonnes_brutes_affichage + ['Gain_CO2_Pct', 'Gain_Prix_Pct']].rename(
-            columns={**DISPLAY_MAP, 'Gain_CO2_Pct': 'Gain CO2 (%)', 'Gain_Prix_Pct': 'Gain Prix (%)'}
-        )
-        
-        csv_sub_bytes = df_export_sub.to_csv(index=False, sep=';', decimal=',', encoding='utf-8-sig')
-        
-        st.download_button(
-            label="📊 Exporter le Top 3 (Excel / CSV)",
-            data=csv_sub_bytes,
-            file_name="Top_3_Substitutions.csv",
-            mime="text/csv",
-            use_container_width=True
-        )      
+            
+            csv_sub_bytes = df_export_sub.to_csv(index=False, sep=';', decimal=',', encoding='utf-8-sig')
+            
+            st.download_button(
+                label="📊 Exporter le Top 3 (Excel / CSV)",
+                data=csv_sub_bytes,
+                file_name="Top_3_Substitutions.csv",
+                mime="text/csv",
+                use_container_width=True
+            )     
     else:
         st.info("Aucune alternative trouvée. Essayez d'élargir les tolérances.")
 
