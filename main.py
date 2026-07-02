@@ -559,9 +559,17 @@ with tab2:
         st.write("---")
 
         # EXPORT DU NOUVEAU PDF D'ÉTUDE ENRICHI
+        # EXPORT DU NOUVEAU PDF D'ÉTUDE ENRICHI
         if HAS_FPDF:
-            criteres_actuels = {"Re min": f"{limite_elastique_min} MPa", "Young min": f"{module_young_min} GPa", "Durete min": f"{durete_min} HRC", "CO2 max": f"{empreinte_co2_max} kg/kg"}
+            criteres_actuels = {
+                "Re min": f"{limite_elastique_min} MPa", 
+                "Young min": f"{module_young_min} GPa", 
+                "Durete min": f"{durete_min} HRC", 
+                "Temp. Fusion min": f"{temp_fusion_min} °C",
+                "Conductivite min": f"{conductivite_min} W/m.K",
+                "CO2 max": f"{empreinte_co2_max} kg/kg",
+                "Prix max": f"{prix_max} EUR/kg"
+            }
             pdf_etude = generer_pdf_etude(df_filtre, criteres_actuels, type_indice, fig_radar_e, fig_ashby_e)
             st.download_button("📄 Télécharger l'Étude de Faisabilité Enrichie (PDF)", data=pdf_etude, file_name="Etude_Faisabilite.pdf", mime="application/pdf", type="primary")
-
         st.dataframe(df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP).head(20), use_container_width=True)
