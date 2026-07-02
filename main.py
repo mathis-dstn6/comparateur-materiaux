@@ -197,7 +197,7 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
-# --- GÉNÉRATEUR PDF 2 : CAHIER DES CHARGES (ENRICHI AVEC GRAPHES) ---
+# --- GÉNÉRATEUR PDF 2 : CAHIER DES CHARGES ---
 def generer_pdf_etude(df_top, criteres, type_indice, fig_radar, fig_ashby):
     pdf = FPDF()
     pdf.add_page()
@@ -238,7 +238,6 @@ def generer_pdf_etude(df_top, criteres, type_indice, fig_radar, fig_ashby):
         pdf.cell(0, 4, f"        RSE & Cout : CO2 = {row['Empreinte_CO2']} kg | Prix = {row['Prix_euro_kg']} EUR | Score = {row['Score_Eco']}/100", ln=True)
         pdf.ln(3)
         
-    # INJECTION DES GRAPHES DE L'ÉTUDE DE FAISABILITÉ
     pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(0, 8, "  3. CARTOGRAPHIE ET VISUALISATION DU CAHIER DES CHARGES", ln=True, fill=True)
@@ -262,7 +261,7 @@ def generer_pdf_etude(df_top, criteres, type_indice, fig_radar, fig_ashby):
         os.unlink(path_ashby)
     except Exception as e:
         pdf.set_font("Arial", 'I', 10)
-        pdf.cell(0, 6, "   (Installez 'kaleido' pour inclure automatiquement les graphiques dans ce PDF)", ln=True)
+        pdf.cell(0, 6, "   (Installez 'kaleido' pour inclure les graphiques dans ce PDF)", ln=True)
         pdf.ln(4)
         
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
@@ -461,7 +460,7 @@ with tab1:
     else:
         st.info("Aucune alternative trouvée. Essayez d'élargir les tolérances.")
 
-# --- ONGLET 2 : FILTRAGE STRICT & CAHIER DES CHARGES (ENRICHI) ---
+# --- ONGLET 2 : FILTRAGE STRICT & CAHIER DES CHARGES ---
 with tab2:
     st.header("Étude de Faisabilité & Cahier des Charges")
     type_indice = st.selectbox("Indice d'Ashby :", ["Aucun - Tri standard", "Traction pure (Max Re / ρ)", "Flexion pure (Max √Re / ρ)"])
@@ -497,7 +496,6 @@ with tab2:
     if not df_filtre.empty:
         top_etude = df_filtre.head(3)
         
-        # --- BLOC GRAPHES AJOUTÉ DANS L'ONGLET ÉTUDE ---
         st.markdown("### 📊 Analyses Graphiques du Cahier des Charges")
         col_radar_e, col_ashby_e = st.columns(2)
         
@@ -512,8 +510,7 @@ with tab2:
                 vals_alt = obtenir_profil_radar(alt)
                 fig_radar_e.add_trace(go.Scatterpolar(
                     r=vals_alt, theta=categories, fill='toself',
-                    name=f"#{pos+1} {alt['Nom']}",
-                    line=dict(color=colors_e[pos], width=3)
+                    name=f"#{pos+1} {alt['Nom']}", line=dict(color=colors_e[pos], width=3)
                 ))
             fig_radar_e.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=True, height=450, margin=dict(t=20, b=20))
             st.plotly_chart(fig_radar_e, use_container_width=True)
@@ -521,27 +518,21 @@ with tab2:
         with col_ashby_e:
             st.markdown("#### 📈 Positionnement d'Ashby (Filtrage en bloc)")
             axe_x_e = st.selectbox(
-                "Variable de l'Axe X (Étude) :",
-                ["Densite", "Prix_euro_kg", "Empreinte_CO2"],
-                format_func=lambda x: DISPLAY_MAP[x],
-                key="axe_x_etude"
+                "Variable de l'Axe X (Étude) :", ["Densite", "Prix_euro_kg", "Empreinte_CO2"],
+                format_func=lambda x: DISPLAY_MAP[x], key="axe_x_etude"
             )
             
             fig_ashby_e = go.Figure()
-            # 1. Fond du catalogue complet (Très atténué)
             for famille, group in df_initial.groupby('Famille'):
                 fig_ashby_e.add_trace(go.Scatter(
                     x=group[axe_x_e], y=group['Limite_Elastique_MPa'],
-                    mode='markers', name=famille, marker=dict(size=6, opacity=0.10), text=group['Nom'],
-                    showlegend=False
+                    mode='markers', name=famille, marker=dict(size=6, opacity=0.10), text=group['Nom'], showlegend=False
                 ))
-            # 2. Le nuage complet des matériaux qui valident les critères (Vert Émeraude doux)
             fig_ashby_e.add_trace(go.Scatter(
                 x=df_filtre[axe_x_e], y=df_filtre['Limite_Elastique_MPa'],
                 mode='markers', name="Solutions Valides", marker=dict(color='#14B8A6', size=8, opacity=0.5),
                 text=df_filtre['Nom'], hovertemplate="<b>%{text}</b><br>Valide selon critères<extra></extra>"
             ))
-            # 3. Le podium final (Gros points d'accents)
             for idx, alt in top_etude.iterrows():
                 pos = list(top_etude.index).index(idx)
                 fig_ashby_e.add_trace(go.Scatter(
@@ -558,18 +549,34 @@ with tab2:
 
         st.write("---")
 
-        # EXPORT DU NOUVEAU PDF D'ÉTUDE ENRICHI
-        # EXPORT DU NOUVEAU PDF D'ÉTUDE ENRICHI
-        if HAS_FPDF:
-            criteres_actuels = {
-                "Re min": f"{limite_elastique_min} MPa", 
-                "Young min": f"{module_young_min} GPa", 
-                "Durete min": f"{durete_min} HRC", 
-                "Temp. Fusion min": f"{temp_fusion_min} °C",
-                "Conductivite min": f"{conductivite_min} W/m.K",
-                "CO2 max": f"{empreinte_co2_max} kg/kg",
-                "Prix max": f"{prix_max} EUR/kg"
-            }
-            pdf_etude = generer_pdf_etude(df_filtre, criteres_actuels, type_indice, fig_radar_e, fig_ashby_e)
-            st.download_button("📄 Télécharger l'Étude de Faisabilité Enrichie (PDF)", data=pdf_etude, file_name="Etude_Faisabilite.pdf", mime="application/pdf", type="primary")
+        # --- SECTIONS DES EXPORTS (COTE À CÔTE) ---
+        c_btn1, c_btn2 = st.columns(2)
+        
+        with c_btn1:
+            if HAS_FPDF:
+                criteres_actuels = {
+                    "Re min": f"{limite_elastique_min} MPa", 
+                    "Young min": f"{module_young_min} GPa", 
+                    "Durete min": f"{durete_min} HRC", 
+                    "Temp. Fusion min": f"{temp_fusion_min} °C",
+                    "Conductivite min": f"{conductivite_min} W/m.K",
+                    "CO2 max": f"{empreinte_co2_max} kg/kg",
+                    "Prix max": f"{prix_max} EUR/kg"
+                }
+                pdf_etude = generer_pdf_etude(df_filtre, criteres_actuels, type_indice, fig_radar_e, fig_ashby_e)
+                st.download_button("📄 Télécharger l'Étude de Faisabilité (PDF)", data=pdf_etude, file_name="Etude_Faisabilite.pdf", mime="application/pdf", type="primary", use_container_width=True)
+
+        with c_btn2:
+            # --- CONVERSION DU TABLEAU EN CSV NETTOYÉ ET TRADUIT ---
+            df_export = df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP)
+            csv_bytes = df_export.to_csv(index=False, sep=';', encoding='utf-8-sig')
+            
+            st.download_button(
+                label="📊 Exporter les Données Brutes (Excel / CSV)",
+                data=csv_bytes,
+                file_name="Cahier_des_Charges_MatSwap.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
         st.dataframe(df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP).head(20), use_container_width=True)
