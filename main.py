@@ -14,7 +14,7 @@ except ImportError:
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="MatSwap", page_icon="🔄", layout="wide")
 
-# --- TITRE SAAS PREMIUM (CSS) ---
+# --- TITRE SAAS PREMIUM ET STYLISATION DES BOUTONS (CSS) ---
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght=700;800&display=swap');
@@ -37,6 +37,17 @@ st.markdown("""
             font-size: 1.1rem;
             margin-bottom: 30px;
             margin-top: 5px;
+        }
+        
+        /* Stylisation spécifique pour les boutons Excel/CSV (Vert) */
+        div.stDownloadButton > button:not([data-testid="baseButton-primary"]) {
+            background-color: #10B981 !important;
+            color: white !important;
+            border: none !important;
+        }
+        div.stDownloadButton > button:not([data-testid="baseButton-primary"]):hover {
+            background-color: #059669 !important;
+            color: white !important;
         }
     </style>
     <div class='main-title-container'>🔄 <span class='text-gradient'>MatSwap</span></div>
@@ -438,7 +449,7 @@ with tab1:
             )
             st.plotly_chart(fig_ashby, use_container_width=True)
 
-        # --- TELECHARGEMENT EN PDF ET CSV ALIGNES ---
+        # --- TELECHARGEMENT EN PDF (BLEU) ET CSV (VERT) ALIGNES ---
         st.write("---")
         col_pdf, col_csv = st.columns(2)
         
@@ -450,6 +461,7 @@ with tab1:
                     data=pdf_bytes, 
                     file_name="Rapport_Substitution_MatSwap.pdf", 
                     mime="application/pdf", 
+                    type="primary", 
                     use_container_width=True
                 )
         
@@ -562,6 +574,7 @@ with tab2:
             )
             st.plotly_chart(fig_ashby_e, use_container_width=True)
 
+        # --- TELECHARGEMENT EN PDF (BLEU) ET CSV (VERT) ALIGNES POUR L'ONGLET 2 ---
         st.write("---")
         c_btn1, c_btn2 = st.columns(2)
         
@@ -577,11 +590,24 @@ with tab2:
                     "Prix max": f"{prix_max} EUR/kg"
                 }
                 pdf_etude = generer_pdf_etude(df_filtre, criteres_actuels, type_indice, fig_radar_e, fig_ashby_e)
-                st.download_button("📄 Télécharger l'Étude de Faisabilité (PDF)", data=pdf_etude, file_name="Etude_Faisabilite.pdf", mime="application/pdf", type="primary", use_container_width=True)
+                st.download_button(
+                    label="📄 Télécharger l'Étude de Faisabilité (PDF)", 
+                    data=pdf_etude, 
+                    file_name="Etude_Faisabilite.pdf", 
+                    mime="application/pdf", 
+                    type="primary", 
+                    use_container_width=True
+                )
 
         with c_btn2:
             df_export = df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP)
             csv_bytes = df_export.to_csv(index=False, sep=';', decimal=',', encoding='utf-8-sig')
-            st.download_button(label="📊 Exporter les Données Brutes (Excel / CSV)", data=csv_bytes, file_name="Cahier_des_Charges_MatSwap.csv", mime="text/csv", use_container_width=True)
+            st.download_button(
+                label="📊 Exporter les Données Brutes (Excel / CSV)", 
+                data=csv_bytes, 
+                file_name="Cahier_des_Charges_MatSwap.csv", 
+                mime="text/csv", 
+                use_container_width=True
+            )
 
         st.dataframe(df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP).head(20), use_container_width=True)
