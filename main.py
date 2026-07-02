@@ -61,11 +61,9 @@ HELP_SCORE = "Note sur 100 valorisant les matériaux bas carbone et hautement re
 # --- CHARGEMENT DES DONNÉES ---
 @st.cache_data
 def charger_donnees():
-    # --- ICI LE NOM DU NOUVEAU FICHIER CONFIGURÉ ---
     df = pd.read_csv('alliages_metalliques_4_2.csv', sep=';')
     if 'Famille' not in df.columns: df['Famille'] = 'Non spécifié'
     
-    # Sécurité si la colonne HRC est vide ou manquante au début
     if 'Durete_HRC' not in df.columns:
         df['Durete_HRC'] = 0.0
         
@@ -280,9 +278,17 @@ with tab1:
         
         fig = go.Figure()
         vals_ref = [100, 100, 100, 100, 100]
-        fig.add_trace(go.Scatterpolar(r=vals_ref, theta=categories, fill='toself', name=f"Réf: {row_ref['Nom']}", line_color='#94A3B8'))
         
-        colors = ['#2563EB', '#14B8A6', '#8B5CF6']
+        # 1. Matériau de Référence (Trait épais Épaisseur 4, Gris Ardoise)
+        fig.add_trace(go.Scatterpolar(
+            r=vals_ref, theta=categories, fill='toself', 
+            name=f"Réf: {row_ref['Nom']}", 
+            line=dict(color='#64748B', width=4)
+        ))
+        
+        # 3 couleurs ultra distinctes pour les alternatives (Bleu Électrique, Vert Émeraude, Violet Flash)
+        colors = ['#2563EB', '#10B981', '#8B5CF6']
+        
         for idx, alt in top_alternatives.iterrows():
             pos = list(top_alternatives.index).index(idx)
             vals_alt = [
@@ -292,8 +298,13 @@ with tab1:
                 (row_ref['Densite'] / alt['Densite']) * 100,       
                 (row_ref['Prix_euro_kg'] / alt['Prix_euro_kg']) * 100 
             ]
-            fill_style = 'toself' if pos == 0 else 'none'
-            fig.add_trace(go.Scatterpolar(r=vals_alt, theta=categories, fill=fill_style, name=f"#{pos+1} {alt['Nom']}", line_color=colors[pos]))
+            
+            # Application systématique du remplissage et de l'épaisseur à 3 pour TOUS
+            fig.add_trace(go.Scatterpolar(
+                r=vals_alt, theta=categories, fill='toself', 
+                name=f"#{pos+1} {alt['Nom']}", 
+                line=dict(color=colors[pos], width=3)
+            ))
             
         fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 150])), showlegend=True, height=500, margin=dict(t=20, b=20))
         st.plotly_chart(fig, use_container_width=True)
