@@ -54,7 +54,7 @@ DISPLAY_MAP = {
 }
 
 HELP_RE = "Limite Élastique (Re) : Contrainte maximale avant déformation irréversible."
-HELP_YOUNG = "Module de Young (E) : Mesure la rigidité. Plus il est élevé, moins la pièce fléchira."
+HELP_YOUNG = "Module de Young (E) : Mesure la rigidité. Plus il éelevé, moins la pièce fléchira."
 HELP_DURETE = "Dureté Rockwell (C) : Résistance à la pénétration. Crucial pour l'usure et le frottement."
 HELP_CO2 = "Kilos de CO₂ émis pour produire 1 kg de cet alliage."
 HELP_PRIX = "Prix estimatif sur le marché industriel européen."
@@ -105,8 +105,8 @@ def obtenir_profil_radar(row):
         norm_moins(row['Prix_euro_kg'], 'Prix_euro_kg')  
     ]
 
-# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION ---
-def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt, prix_ref, prix_alt, fig_radar, fig_ashby):
+# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION ENRICHIE (TOP 3 COMPLET) ---
+def generer_pdf(ref, top_alternatives, simuler_piece, poids_actuel, fig_radar, fig_ashby):
     pdf = FPDF()
     pdf.add_page()
     NOIR, GRIS = (30, 30, 30), (100, 100, 100)
@@ -114,7 +114,7 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.set_fill_color(37, 99, 235)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 15, "RAPPORT D'AUDIT : SUBSTITUTION MATSWAP", ln=True, align="C", fill=True)
+    pdf.cell(0, 15, "RAPPORT D'AUDIT : ENSEMBLE DES SCENARIOS MATSWAP", ln=True, align="C", fill=True)
     pdf.ln(5)
     
     pdf.set_text_color(*GRIS)
@@ -122,6 +122,7 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.cell(0, 6, f"Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')} via MatSwap", ln=True, align="R")
     pdf.ln(5)
     
+    # 1. Matériau de Référence
     pdf.set_text_color(*NOIR)
     pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(230, 230, 230)
@@ -132,41 +133,40 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.cell(0, 5, f"   - Base 1 kg : CO2 = {ref['Empreinte_CO2']} kg/kg | Prix = {ref['Prix_euro_kg']} EUR/kg | Densite = {ref['Densite']} kg/m3", ln=True)
     pdf.ln(4)
     
+    # 2. Boucle sur le Top 3 complet des alternatives
     pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(219, 234, 254)
-    pdf.cell(0, 8, f"  2. ALTERNATIVE RECOMMANDEE : {alt['Nom']} ({alt['Famille']})", ln=True, fill=True)
-    pdf.set_font("Arial", '', 10)
+    pdf.cell(0, 8, "  2. CLASSEMENT DES MEILLEURES ALTERNATIVES ELIGIBLES", ln=True, fill=True)
     pdf.ln(2)
-    pdf.cell(0, 5, f"   - Mecanique : Re = {alt['Limite_Elastique_MPa']} MPa | E = {alt['Module_Young_GPa']} GPa | Durete = {alt['Durete_HRC']} HRC", ln=True)
-    pdf.cell(0, 5, f"   - Base 1 kg : CO2 = {alt['Empreinte_CO2']} kg/kg | Prix = {alt['Prix_euro_kg']} EUR/kg | Densite = {alt['Densite']} kg/m3", ln=True)
-    pdf.ln(4)
     
-    pdf.set_font("Arial", 'B', 12)
-    pdf.set_fill_color(241, 245, 249)
-    if simuler_piece:
-        pdf.cell(0, 8, f"  3. BILAN SUR PIECE REELLE (Volume constant)", ln=True, fill=True)
-    else:
-        pdf.cell(0, 8, f"  3. BILAN GENERIQUE (Pour 1 kg de matiere)", ln=True, fill=True)
+    for idx, (_, alt) in enumerate(top_alternatives.iterrows(), 1):
+        pdf.set_font("Arial", 'B', 11)
+        pdf.set_text_color(37, 99, 235)
+        pdf.cell(0, 6, f"   Scenario #{idx} : {alt['Nom']} ({alt['Famille']})", ln=True)
+        pdf.set_text_color(*NOIR)
+        pdf.set_font("Arial", '', 10)
         
-    pdf.set_font("Arial", '', 10)
-    pdf.ln(2)
-    
-    if simuler_piece:
-        diff_poids = poids_ref - poids_alt
-        pdf.cell(0, 6, f"   -> Poids de la piece : Passe de {poids_ref:.2f} kg a {poids_alt:.2f} kg ({'-' if diff_poids>0 else '+'}{abs(diff_poids):.2f} kg per piece)", ln=True)
-    
-    diff_co2 = co2_ref - co2_alt
-    diff_prix = prix_ref - prix_alt
-    unite = "piece" if simuler_piece else "kg"
-    
-    pdf.cell(0, 6, f"   -> Bilan Carbone : {'Economie' if diff_co2>0 else 'Surcout'} de {abs(diff_co2):.2f} kg CO2 / {unite}", ln=True)
-    pdf.cell(0, 6, f"   -> Bilan Financier : {'Economie' if diff_prix>0 else 'Surcout'} de {abs(diff_prix):.2f} EUR / {unite}", ln=True)
-    pdf.cell(0, 6, f"   -> Score Eco-Conception : +{alt['Score_Eco'] - ref['Score_Eco']} points", ln=True)
-    pdf.ln(6)
-    
+        poids_alt = poids_actuel * (alt['Densite'] / ref['Densite']) if simuler_piece else 1.0
+        co2_ref_tot = ref['Empreinte_CO2'] * poids_actuel
+        co2_alt_tot = alt['Empreinte_CO2'] * poids_alt
+        prix_ref_tot = ref['Prix_euro_kg'] * poids_actuel
+        prix_alt_tot = alt['Prix_euro_kg'] * poids_alt
+        
+        diff_co2 = co2_ref_tot - co2_alt_tot
+        diff_prix = prix_ref_tot - prix_alt_tot
+        unite = "piece" if simuler_piece else "kg"
+        
+        pdf.cell(0, 5, f"     * Proprietes : Re = {alt['Limite_Elastique_MPa']} MPa | E = {alt['Module_Young_GPa']} GPa | Durete = {alt['Durete_HRC']} HRC", ln=True)
+        if simuler_piece:
+            pdf.cell(0, 5, f"     * Poids estime de la piece : {poids_alt:.2f} kg (vs {poids_actuel:.2f} kg pour la reference)", ln=True)
+        pdf.cell(0, 5, f"     * Bilan Carbone : {'Economie' if diff_co2>0 else 'Surcout'} de {abs(diff_co2):.2f} kg CO2 / {unite}", ln=True)
+        pdf.cell(0, 5, f"     * Bilan Financier : {'Economie' if diff_prix>0 else 'Surcout'} de {abs(diff_prix):.2f} EUR / {unite}", ln=True)
+        pdf.ln(3)
+        
+    # 3. Section Graphiques
     pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(230, 230, 230)
-    pdf.cell(0, 8, "  4. ANALYSES GRAPHIQUES RAPPORTÉES", ln=True, fill=True)
+    pdf.cell(0, 8, "  3. CARTOGRAPHIE ET VISUALISATION DU CONTEXTE", ln=True, fill=True)
     pdf.ln(4)
     
     try:
@@ -315,6 +315,38 @@ with tab1:
         with c3: keep_stiff = st.checkbox("Conserver Rigidité", False); tol_stiff = st.slider("Tolérance Young (%)", 0, 50, 20, disabled=not keep_stiff, help=HELP_YOUNG)
 
     st.write("---")
+
+    col_pdf, col_csv = st.columns(2)
+        
+        with col_pdf:
+            if HAS_FPDF:
+                pdf_bytes = generer_pdf(
+                    row_ref, top_alternatives, simuler_piece, poids_actuel, fig, fig_ashby
+                )
+                st.download_button("📄 Exporter le Rapport d'Audit (PDF)", data=pdf_bytes, file_name=f"Rapport_Substitution_MatSwap.pdf", mime="application/pdf", type="primary", use_container_width=True)
+        
+        with col_csv:
+            # Préparation des données pour export (on ajoute les colonnes calculées)
+            df_export_sub = top_alternatives.copy()
+            # Ajout des colonnes de gains pour l'export
+            df_export_sub['Gain_CO2_Pct'] = ((row_ref['Empreinte_CO2'] - df_export_sub['Empreinte_CO2']) / row_ref['Empreinte_CO2']) * 100
+            df_export_sub['Gain_Prix_Pct'] = ((row_ref['Prix_euro_kg'] - df_export_sub['Prix_euro_kg']) / row_ref['Prix_euro_kg']) * 100
+            
+            # Renommage pour cohérence
+            df_export_sub = df_export_sub[colonnes_brutes_affichage + ['Gain_CO2_Pct', 'Gain_Prix_Pct']].rename(columns={**DISPLAY_MAP, 'Gain_CO2_Pct': 'Gain CO2 (%)', 'Gain_Prix_Pct': 'Gain Prix (%)'})
+            
+            csv_sub_bytes = df_export_sub.to_csv(index=False, sep=';', decimal=',', encoding='utf-8-sig')
+            
+            st.download_button(
+                label="📊 Exporter le Top 3 (Excel / CSV)",
+                data=csv_sub_bytes,
+                file_name="Top_3_Substitutions.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+            
+    else:
+        st.info("Aucune alternative trouvée. Essayez d'élargir les tolérances.")
     
     st.markdown("### 📦 Simulation sur Pièce Réelle (Optionnelle)")
     simuler_piece = st.toggle("Activer le calcul d'impact pour une pièce spécifique", value=False)
@@ -442,20 +474,14 @@ with tab1:
             )
             st.plotly_chart(fig_ashby, use_container_width=True)
 
+        # --- TELECHARGEMENT DU NOUVEAU RAPPORT DE SUBSTITUTION ENRICHI ---
         st.write("---")
-        meilleur_choix = top_alternatives.iloc[0]
         if HAS_FPDF:
-            poids_alt_best = poids_actuel * (meilleur_choix['Densite'] / row_ref['Densite']) if simuler_piece else 1.0
-            co2_ref_tot = row_ref['Empreinte_CO2'] * poids_actuel
-            co2_alt_tot = meilleur_choix['Empreinte_CO2'] * poids_alt_best
-            prix_ref_tot = row_ref['Prix_euro_kg'] * poids_actuel
-            prix_alt_tot = meilleur_choix['Prix_euro_kg'] * poids_alt_best
-            
+            # On envoie dorénavant l'ensemble du tableau 'top_alternatives' au lieu du premier choix uniquement
             pdf_bytes = generer_pdf(
-                row_ref, meilleur_choix, simuler_piece, poids_actuel, poids_alt_best, 
-                co2_ref_tot, co2_alt_tot, prix_ref_tot, prix_alt_tot, fig, fig_ashby
+                row_ref, top_alternatives, simuler_piece, poids_actuel, fig, fig_ashby
             )
-            st.download_button("📄 Exporter le Rapport d'Audit Enrichi (PDF)", data=pdf_bytes, file_name=f"Rapport_MatSwap.pdf", mime="application/pdf", type="primary")
+            st.download_button("📄 Exporter le Rapport d'Audit Globale (PDF)", data=pdf_bytes, file_name=f"Rapport_Substitution_MatSwap.pdf", mime="application/pdf", type="primary")
             
     else:
         st.info("Aucune alternative trouvée. Essayez d'élargir les tolérances.")
@@ -549,7 +575,6 @@ with tab2:
 
         st.write("---")
 
-        # --- SECTIONS DES EXPORTS (COTE À CÔTE) ---
         c_btn1, c_btn2 = st.columns(2)
         
         with c_btn1:
@@ -567,9 +592,7 @@ with tab2:
                 st.download_button("📄 Télécharger l'Étude de Faisabilité (PDF)", data=pdf_etude, file_name="Etude_Faisabilite.pdf", mime="application/pdf", type="primary", use_container_width=True)
 
         with c_btn2:
-            # --- CONVERSION DU TABLEAU EN CSV NETTOYÉ ET TRADUIT ---
             df_export = df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP)
-            # AJOUT DU PARAMÈTRE decimal=',' POUR EXCEL EN FRANÇAIS
             csv_bytes = df_export.to_csv(index=False, sep=';', decimal=',', encoding='utf-8-sig')
             
             st.download_button(
