@@ -105,8 +105,8 @@ def obtenir_profil_radar(row):
         norm_moins(row['Prix_euro_kg'], 'Prix_euro_kg')  
     ]
 
-# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION ---
-def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt, prix_ref, prix_alt):
+# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION (AVEC GRAPHIQUES INTEGRÉS) ---
+def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt, prix_ref, prix_alt, fig_radar, fig_ashby):
     pdf = FPDF()
     pdf.add_page()
     NOIR, GRIS = (30, 30, 30), (100, 100, 100)
@@ -162,8 +162,43 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.cell(0, 6, f"   -> Bilan Carbone : {'Economie' if diff_co2>0 else 'Surcout'} de {abs(diff_co2):.2f} kg CO2 / {unite}", ln=True)
     pdf.cell(0, 6, f"   -> Bilan Financier : {'Economie' if diff_prix>0 else 'Surcout'} de {abs(diff_prix):.2f} EUR / {unite}", ln=True)
     pdf.cell(0, 6, f"   -> Score Eco-Conception : +{alt['Score_Eco'] - ref['Score_Eco']} points", ln=True)
+    pdf.ln(6)
     
-    pdf.ln(10)
+    # --- SECTION NOUVELLE : ENREGISTREMENT ET INJECTION DES GRAPHES ---
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_fill_color(230, 230, 230)
+    pdf.cell(0, 8, "  4. ANALYSES GRAPHIQUES RAPPORTÉES", ln=True, fill=True)
+    pdf.ln(4)
+    
+    try:
+        import tempfile
+        import os
+        
+        # Capture de la toile d'araignée
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_radar:
+            f_radar.write(fig_radar.to_image(format="png", width=550, height=450))
+            path_radar = f_radar.name
+            
+        # Capture du diagramme d'Ashby
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_ashby:
+            f_ashby.write(fig_ashby.to_image(format="png", width=550, height=450))
+            path_ashby = f_ashby.name
+        
+        # Injection côte à côte sur la largeur de la page A4 (210mm)
+        y_actuel = pdf.get_y()
+        pdf.image(path_radar, x=10, y=y_actuel, w=92)
+        pdf.image(path_ashby, x=108, y=y_actuel, w=92)
+        pdf.ln(78)  # On descend le curseur pour ne pas écrire par-dessus les images
+        
+        # Nettoyage des fichiers temporaires du serveur
+        os.unlink(path_radar)
+        os.unlink(path_ashby)
+    except Exception as e:
+        pdf.set_font("Arial", 'I', 10)
+        pdf.cell(0, 6, "   (Installez la bibliotheque 'kaleido' pour inclure automatiquement les graphiques dans ce PDF)", ln=True)
+        pdf.ln(4)
+    
+    pdf.ln(4)
     pdf.set_text_color(*GRIS)
     pdf.set_font("Arial", 'I', 9)
     pdf.multi_cell(0, 4, "Ce document certifie la pertinence de la substitution. Analyse effectuee en temps reel via le moteur MatSwap.", align="J")
@@ -322,11 +357,11 @@ with tab1:
         
         st.write("---")
         
-        # --- MISE EN PAGE DU DASHBOARD GRAPHIQUE (CÔTE À CÔTE) ---
+        # --- BLOC DE RENDU DES GRAPHES ---
         st.markdown("### 📊 Analyses Graphiques Avancées")
         col_radar, col_ashby = st.columns(2)
         
-        # --- COLONNE GAUCHE : RADAR CHART ---
+        # 1. GENERATION RADAR CHART
         with col_radar:
             st.markdown("#### 🕸️ Profil de Performance (Échelle Absolue 0-100)")
             categories = ['Résistance (Re)', 'Rigidité (E)', 'Éco-Score', 'Légèreté (Inv. ρ)', 'Économie (Inv. €)']
@@ -353,11 +388,9 @@ with tab1:
             fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=True, height=450, margin=dict(t=20, b=20))
             st.plotly_chart(fig, use_container_width=True)
 
-        # --- COLONNE DROITE : VERITABLE DIAGRAMME D'ASHBY INTERACTIF ---
+        # 2. GENERATION DIAGRAMME D'ASHBY
         with col_ashby:
             st.markdown("#### 📈 Cartographie d'Ashby (vs Résistance Re)")
-            
-            # Sélecteur d'axe X interactif pour l'utilisateur
             axe_x_choix = st.selectbox(
                 "Sélectionner la variable de l'Axe X :", 
                 ["Densite", "Prix_euro_kg", "Empreinte_CO2"], 
@@ -365,54 +398,36 @@ with tab1:
             )
             
             fig_ashby = go.Figure()
-            
-            # 1. Ajout de TOUS les matériaux du catalogue en tâche de fond (triés par Famille)
             for famille, group in df_initial.groupby('Famille'):
                 fig_ashby.add_trace(go.Scatter(
-                    x=group[axe_x_choix],
-                    y=group['Limite_Elastique_MPa'],
-                    mode='markers',
-                    name=famille,
-                    marker=dict(size=7, opacity=0.35),
-                    text=group['Nom'],
+                    x=group[axe_x_choix], y=group['Limite_Elastique_MPa'],
+                    mode='markers', name=famille, marker=dict(size=7, opacity=0.35), text=group['Nom'],
                     hovertemplate="<b>%{text}</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
                 ))
             
-            # 2. Ajout du matériau de référence (Gros Diamant Noir)
             fig_ashby.add_trace(go.Scatter(
-                x=[row_ref[axe_x_choix]],
-                y=[row_ref['Limite_Elastique_MPa']],
-                mode='markers',
-                name=f"Réf: {row_ref['Nom']}",
-                marker=dict(color='#475569', size=15, symbol='diamond', line=dict(color='white', width=2)),
-                text=[row_ref['Nom']],
+                x=[row_ref[axe_x_choix]], y=[row_ref['Limite_Elastique_MPa']],
+                mode='markers', name=f"Réf: {row_ref['Nom']}",
+                marker=dict(color='#475569', size=15, symbol='diamond', line=dict(color='white', width=2)), text=[row_ref['Nom']],
                 hovertemplate="<b>%{text} (RÉFÉRENCE)</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
             ))
             
-            # 3. Ajout du Top 3 recommandé (Gros points colorés)
             for idx, alt in top_alternatives.iterrows():
                 pos = list(top_alternatives.index).index(idx)
                 fig_ashby.add_trace(go.Scatter(
-                    x=[alt[axe_x_choix]],
-                    y=[alt['Limite_Elastique_MPa']],
-                    mode='markers',
-                    name=f"#{pos+1} {alt['Nom']}",
-                    marker=dict(color=colors[pos], size=13, symbol='circle', line=dict(color='white', width=2)),
-                    text=[alt['Nom']],
+                    x=[alt[axe_x_choix]], y=[alt['Limite_Elastique_MPa']],
+                    mode='markers', name=f"#{pos+1} {alt['Nom']}",
+                    marker=dict(color=colors[pos], size=13, symbol='circle', line=dict(color='white', width=2)), text=[alt['Nom']],
                     hovertemplate="<b>%{text} (Alternative #"+str(pos+1)+")</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
                 ))
                 
             fig_ashby.update_layout(
-                xaxis_title=DISPLAY_MAP[axe_x_choix],
-                yaxis_title="Limite Élastique Re (MPa)",
-                showlegend=True,
-                height=400,
-                margin=dict(t=10, b=10),
-                plot_bgcolor='rgba(241,245,249,0.5)',
-                paper_bgcolor='rgba(0,0,0,0)'
+                xaxis_title=DISPLAY_MAP[axe_x_choix], yaxis_title="Limite Élastique Re (MPa)", showlegend=True, height=400,
+                margin=dict(t=10, b=10), plot_bgcolor='rgba(241,245,249,0.5)', paper_bgcolor='rgba(0,0,0,0)'
             )
             st.plotly_chart(fig_ashby, use_container_width=True)
 
+        # --- EXPORT DU PDF (EN SÉCURISANT LES IMAGES) ---
         st.write("---")
         meilleur_choix = top_alternatives.iloc[0]
         if HAS_FPDF:
@@ -422,8 +437,12 @@ with tab1:
             prix_ref_tot = row_ref['Prix_euro_kg'] * poids_actuel
             prix_alt_tot = meilleur_choix['Prix_euro_kg'] * poids_alt_best
             
-            pdf_bytes = generer_pdf(row_ref, meilleur_choix, simuler_piece, poids_actuel, poids_alt_best, co2_ref_tot, co2_alt_tot, prix_ref_tot, prix_alt_tot)
-            st.download_button("📄 Exporter le Rapport d'Audit pour le Choix #1 (PDF)", data=pdf_bytes, file_name=f"Rapport_MatSwap.pdf", mime="application/pdf", type="primary")
+            # On envoie les figures HTML à la fonction PDF pour qu'elle puisse tenter de les dessiner
+            pdf_bytes = generer_pdf(
+                row_ref, meilleur_choix, simuler_piece, poids_actuel, poids_alt_best, 
+                co2_ref_tot, co2_alt_tot, prix_ref_tot, prix_alt_tot, fig, fig_ashby
+            )
+            st.download_button("📄 Exporter le Rapport d'Audit Enrichi (PDF)", data=pdf_bytes, file_name=f"Rapport_MatSwap.pdf", mime="application/pdf", type="primary")
             
     else:
         st.info("Aucune alternative trouvée. Essayez d'élargir les tolérances.")
