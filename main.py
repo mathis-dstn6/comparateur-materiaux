@@ -17,7 +17,7 @@ st.set_page_config(page_title="MatSwap", page_icon="🔄", layout="wide")
 # --- TITRE SAAS PREMIUM (CSS) ---
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght=700;800&display=swap');
         .main-title {
             font-family: 'Poppins', sans-serif;
             font-size: 3.5rem;
@@ -45,6 +45,7 @@ st.markdown("""
 DISPLAY_MAP = {
     'Nom': 'Nom de l\'Alliage', 'Famille': 'Famille Métallurgique', 'Densite': 'Densité (kg/m³)',
     'Module_Young_GPa': 'Module de Young (GPa)', 'Limite_Elastique_MPa': 'Limite Élastique (MPa)',
+    'Durete_HRC': 'Dureté Rockwell (HRC)',
     'Temp_Fusion_C': 'Temp. de Fusion (°C)', 'Conductivite_Thermique_W_mK': 'Conductivité (W/m·K)',
     'Empreinte_CO2': 'Empreinte CO₂ (kg/kg)', 'Recyclabilite_pct': 'Recyclabilité (%)',
     'Prix_euro_kg': 'Prix moyen (€/kg)', 'Score_Eco': 'Score Éco-Conception (/100)'
@@ -52,6 +53,7 @@ DISPLAY_MAP = {
 
 HELP_RE = "Limite Élastique (Re) : Contrainte maximale avant déformation irréversible."
 HELP_YOUNG = "Module de Young (E) : Mesure la rigidité. Plus il est élevé, moins la pièce fléchira."
+HELP_DURETE = "Dureté Rockwell (C) : Résistance à la pénétration. Crucial pour l'usure et le frottement."
 HELP_CO2 = "Kilos de CO₂ émis pour produire 1 kg de cet alliage."
 HELP_PRIX = "Prix estimatif sur le marché industriel européen."
 HELP_SCORE = "Note sur 100 valorisant les matériaux bas carbone et hautement recyclables."
@@ -59,10 +61,16 @@ HELP_SCORE = "Note sur 100 valorisant les matériaux bas carbone et hautement re
 # --- CHARGEMENT DES DONNÉES ---
 @st.cache_data
 def charger_donnees():
-    df = pd.read_csv('alliages_metalliques_4_1.csv', sep=';')
+    # --- ICI LE NOM DU NOUVEAU FICHIER CONFIGURÉ ---
+    df = pd.read_csv('alliages_metalliques_4_2.csv', sep=';')
     if 'Famille' not in df.columns: df['Famille'] = 'Non spécifié'
+    
+    # Sécurité si la colonne HRC est vide ou manquante au début
+    if 'Durete_HRC' not in df.columns:
+        df['Durete_HRC'] = 0.0
         
-    for col in ['Densite', 'Module_Young_GPa', 'Limite_Elastique_MPa', 'Empreinte_CO2', 'Prix_euro_kg', 'Temp_Fusion_C', 'Conductivite_Thermique_W_mK', 'Recyclabilite_pct']:
+    colonnes_tri = ['Densite', 'Module_Young_GPa', 'Limite_Elastique_MPa', 'Durete_HRC', 'Empreinte_CO2', 'Prix_euro_kg', 'Temp_Fusion_C', 'Conductivite_Thermique_W_mK', 'Recyclabilite_pct']
+    for col in colonnes_tri:
         if col in df.columns: df[col] = df[col].replace(0, 1e-6)
             
     df['Indice_Traction'] = df['Limite_Elastique_MPa'] / df['Densite']
@@ -100,7 +108,7 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.cell(0, 8, f"  1. MATERIAU DE REFERENCE : {ref['Nom']} ({ref['Famille']})", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
     pdf.ln(2)
-    pdf.cell(0, 5, f"   - Mecanique : Re = {ref['Limite_Elastique_MPa']} MPa | E = {ref['Module_Young_GPa']} GPa", ln=True)
+    pdf.cell(0, 5, f"   - Mecanique : Re = {ref['Limite_Elastique_MPa']} MPa | E = {ref['Module_Young_GPa']} GPa | Durete = {ref['Durete_HRC']} HRC", ln=True)
     pdf.cell(0, 5, f"   - Base 1 kg : CO2 = {ref['Empreinte_CO2']} kg/kg | Prix = {ref['Prix_euro_kg']} EUR/kg | Densite = {ref['Densite']} kg/m3", ln=True)
     pdf.ln(4)
     
@@ -109,7 +117,7 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.cell(0, 8, f"  2. ALTERNATIVE RECOMMANDEE : {alt['Nom']} ({alt['Famille']})", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
     pdf.ln(2)
-    pdf.cell(0, 5, f"   - Mecanique : Re = {alt['Limite_Elastique_MPa']} MPa | E = {alt['Module_Young_GPa']} GPa", ln=True)
+    pdf.cell(0, 5, f"   - Mecanique : Re = {alt['Limite_Elastique_MPa']} MPa | E = {alt['Module_Young_GPa']} GPa | Durete = {alt['Durete_HRC']} HRC", ln=True)
     pdf.cell(0, 5, f"   - Base 1 kg : CO2 = {alt['Empreinte_CO2']} kg/kg | Prix = {alt['Prix_euro_kg']} EUR/kg | Densite = {alt['Densite']} kg/m3", ln=True)
     pdf.ln(4)
     
@@ -179,7 +187,7 @@ def generer_pdf_etude(df_top, criteres, type_indice):
         pdf.cell(0, 6, f"  #{i} - {row['Nom']} ({row['Famille']})", ln=True)
         pdf.set_text_color(*NOIR)
         pdf.set_font("Arial", '', 9)
-        pdf.cell(0, 4, f"        Mecanique : Re = {row['Limite_Elastique_MPa']} MPa | E = {row['Module_Young_GPa']} GPa | Densite = {row['Densite']} kg/m3", ln=True)
+        pdf.cell(0, 4, f"        Mecanique : Re = {row['Limite_Elastique_MPa']} MPa | E = {row['Module_Young_GPa']} GPa | Durete = {row['Durete_HRC']} HRC", ln=True)
         pdf.cell(0, 4, f"        RSE & Cout : CO2 = {row['Empreinte_CO2']} kg | Prix = {row['Prix_euro_kg']} EUR | Score = {row['Score_Eco']}/100", ln=True)
         pdf.ln(3)
         
@@ -204,7 +212,7 @@ with st.sidebar:
 df_recherche = df_initial[df_initial['Famille'] == famille_choisie] if famille_choisie != 'Toutes' else df_initial
 tab1, tab2 = st.tabs(["🔄 Substitution (Top 3 Scénarios)", "📐 Étude & Cahier des Charges"])
 
-# --- ONGLET 1 : SUBSTITUTION (NOUVELLE VERSION TOP 3) ---
+# --- ONGLET 1 : SUBSTITUTION ---
 with tab1:
     col_sel, col_tol = st.columns([1, 2])
     with col_sel:
@@ -227,14 +235,13 @@ with tab1:
 
     st.markdown(f"#### 📊 Profil actuel : **{materiau_ref}**")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Score Éco", f"{row_ref['Score_Eco']} /100")
-    c2.metric("Densité", f"{row_ref['Densite']} kg/m³")
-    c3.metric(f"CO₂ ({'Total' if simuler_piece else 'au kg'})", f"{row_ref['Empreinte_CO2'] * poids_actuel:.1f} kg")
-    c4.metric(f"Prix ({'Total' if simuler_piece else 'au kg'})", f"{row_ref['Prix_euro_kg'] * poids_actuel:.1f} €")
+    c1.metric("Score Éco", f"{row_ref['Score_Eco']} /100", help=HELP_SCORE)
+    c2.metric("Dureté Rockwell", f"{row_ref['Durete_HRC']} HRC", help=HELP_DURETE)
+    c3.metric(f"CO₂ ({'Total' if simuler_piece else 'au kg'})", f"{row_ref['Empreinte_CO2'] * poids_actuel:.1f} kg", help=HELP_CO2)
+    c4.metric(f"Prix ({'Total' if simuler_piece else 'au kg'})", f"{row_ref['Prix_euro_kg'] * poids_actuel:.1f} €", help=HELP_PRIX)
     
     st.write("---")
 
-    # Filtrage des alternatives
     df_alt = df_initial[df_initial['Nom'] != materiau_ref].copy()
     if keep_mecha: df_alt = df_alt[df_alt['Limite_Elastique_MPa'] >= row_ref['Limite_Elastique_MPa'] * (1 - (tol_mecha / 100))]
     if keep_thermal: df_alt = df_alt[df_alt['Temp_Fusion_C'] >= row_ref['Temp_Fusion_C'] * (1 - (tol_thermal / 100))]
@@ -244,18 +251,15 @@ with tab1:
     else: df_alt = df_alt.sort_values(by='Prix_euro_kg')
 
     if not df_alt.empty:
-        # PENDRE LES 3 MEILLEURS SCÉNARIOS
         top_alternatives = df_alt.head(3)
         st.success(f"### 🎉 Les {len(top_alternatives)} meilleures alternatives recommandées")
         
-        # Affichage côte à côte des colonnes
         colonnes_alt = st.columns(len(top_alternatives))
-        
         for idx, col in enumerate(colonnes_alt):
             alt = top_alternatives.iloc[idx]
             with col:
                 st.markdown(f"#### #{idx+1} {alt['Nom']}")
-                st.caption(f"Famille : {alt['Famille']}")
+                st.caption(f"Dureté : {alt['Durete_HRC']} HRC")
                 
                 poids_alt = poids_actuel * (alt['Densite'] / row_ref['Densite']) if simuler_piece else 1.0
                 co2_alt_tot = alt['Empreinte_CO2'] * poids_alt
@@ -266,24 +270,19 @@ with tab1:
                 
                 if simuler_piece:
                     st.metric("Poids Pièce", f"{poids_alt:.1f} kg", f"{-(poids_actuel - poids_alt):.1f} kg", delta_color="inverse")
-                
                 st.metric(f"CO₂ {'Totale' if simuler_piece else ''}", f"{co2_alt_tot:.1f} kg", f"-{gain_co2:.1f}%", delta_color="inverse")
                 st.metric(f"Prix {'Total' if simuler_piece else ''}", f"{prix_alt_tot:.1f} €", f"{'-' if gain_prix>0 else '+'}{abs(gain_prix):.1f}%", delta_color="inverse")
         
         st.write("---")
         
-        # --- RADAR CHART MULTI-SCÉNARIOS ---
         st.markdown("### 🕸️ Comparaison visuelle des scénarios")
         categories = ['Résistance (Re)', 'Rigidité (E)', 'Éco-Score', 'Légèreté (Inv. ρ)', 'Économie (Inv. €)']
         
         fig = go.Figure()
-        # Matériau actuel (Gris)
         vals_ref = [100, 100, 100, 100, 100]
         fig.add_trace(go.Scatterpolar(r=vals_ref, theta=categories, fill='toself', name=f"Réf: {row_ref['Nom']}", line_color='#94A3B8'))
         
-        # Couleurs pour le top 3 (Bleu, Émeraude, Violet)
         colors = ['#2563EB', '#14B8A6', '#8B5CF6']
-        
         for idx, alt in top_alternatives.iterrows():
             pos = list(top_alternatives.index).index(idx)
             vals_alt = [
@@ -293,14 +292,12 @@ with tab1:
                 (row_ref['Densite'] / alt['Densite']) * 100,       
                 (row_ref['Prix_euro_kg'] / alt['Prix_euro_kg']) * 100 
             ]
-            # Empêche la superposition visuelle parfaite de remplir entièrement
             fill_style = 'toself' if pos == 0 else 'none'
             fig.add_trace(go.Scatterpolar(r=vals_alt, theta=categories, fill=fill_style, name=f"#{pos+1} {alt['Nom']}", line_color=colors[pos]))
             
         fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 150])), showlegend=True, height=500, margin=dict(t=20, b=20))
         st.plotly_chart(fig, use_container_width=True)
 
-        # Bouton PDF pour le Choix Numéro 1
         meilleur_choix = top_alternatives.iloc[0]
         if HAS_FPDF:
             poids_alt_best = poids_actuel * (meilleur_choix['Densite'] / row_ref['Densite']) if simuler_piece else 1.0
@@ -315,7 +312,7 @@ with tab1:
     else:
         st.info("Aucune alternative trouvée. Essayez d'élargir les tolérances.")
 
-# --- ONGLET 2 : FILTRAGE STRICT & ASHBY ---
+# --- ONGLET 2 : FILTRAGE STRICT & CAHIER DES CHARGES ---
 with tab2:
     st.header("Étude de Faisabilité & Cahier des Charges")
     type_indice = st.selectbox("Indice d'Ashby :", ["Aucun - Tri standard", "Traction pure (Max Re / ρ)", "Flexion pure (Max √Re / ρ)"])
@@ -323,18 +320,20 @@ with tab2:
     st.write("---")
     c1, c2, c3 = st.columns(3)
     with c1:
-        limite_elastique_min = st.slider("Limite Élastique Min (MPa)", int(df_initial['Limite_Elastique_MPa'].min()), int(df_initial['Limite_Elastique_MPa'].max()), int(df_initial['Limite_Elastique_MPa'].min()))
-        module_young_min = st.slider("Module de Young Min (GPa)", int(df_initial['Module_Young_GPa'].min()), int(df_initial['Module_Young_GPa'].max()), int(df_initial['Module_Young_GPa'].min()))
+        limite_elastique_min = st.slider("Limite Élastique Min (MPa)", int(df_initial['Limite_Elastique_MPa'].min()), int(df_initial['Limite_Elastique_MPa'].max()), int(df_initial['Limite_Elastique_MPa'].min()), help=HELP_RE)
+        module_young_min = st.slider("Module de Young Min (GPa)", int(df_initial['Module_Young_GPa'].min()), int(df_initial['Module_Young_GPa'].max()), int(df_initial['Module_Young_GPa'].min()), help=HELP_YOUNG)
     with c2:
+        durete_min = st.slider("Dureté Minimale souhaitée (HRC)", 0, 70, 0, help=HELP_DURETE)
         temp_fusion_min = st.slider("Temp. de Fusion Min (°C)", int(df_initial['Temp_Fusion_C'].min()), int(df_initial['Temp_Fusion_C'].max()), int(df_initial['Temp_Fusion_C'].min()))
         conductivite_min = st.slider("Conductivité Min (W/m·K)", int(df_initial['Conductivite_Thermique_W_mK'].min()), int(df_initial['Conductivite_Thermique_W_mK'].max()), int(df_initial['Conductivite_Thermique_W_mK'].min()))
     with c3:
-        empreinte_co2_max = st.slider("Empreinte CO₂ Max (kg/kg)", float(df_initial['Empreinte_CO2'].min()), float(df_initial['Empreinte_CO2'].max()), float(df_initial['Empreinte_CO2'].max()))
-        prix_max = st.slider("Prix Max (€/kg)", float(df_initial['Prix_euro_kg'].min()), float(df_initial['Prix_euro_kg'].max()), float(df_initial['Prix_euro_kg'].max()))
+        empreinte_co2_max = st.slider("Empreinte CO₂ Max (kg/kg)", float(df_initial['Empreinte_CO2'].min()), float(df_initial['Empreinte_CO2'].max()), float(df_initial['Empreinte_CO2'].max()), help=HELP_CO2)
+        prix_max = st.slider("Prix Max (€/kg)", float(df_initial['Prix_euro_kg'].min()), float(df_initial['Prix_euro_kg'].max()), float(df_initial['Prix_euro_kg'].max()), help=HELP_PRIX)
         
     df_filtre = df_initial[
         (df_initial['Limite_Elastique_MPa'] >= limite_elastique_min) &
         (df_initial['Module_Young_GPa'] >= module_young_min) &
+        (df_initial['Durete_HRC'] >= durete_min) &
         (df_initial['Temp_Fusion_C'] >= temp_fusion_min) &
         (df_initial['Conductivite_Thermique_W_mK'] >= conductivite_min) &
         (df_initial['Empreinte_CO2'] <= empreinte_co2_max) &
@@ -347,7 +346,7 @@ with tab2:
     st.subheader(f"📊 {len(df_filtre)} matériau(x) valide(s)")
     if not df_filtre.empty:
         if HAS_FPDF:
-            criteres_actuels = {"Re min": f"{limite_elastique_min} MPa", "Young min": f"{module_young_min} GPa", "CO2 max": f"{empreinte_co2_max} kg/kg"}
+            criteres_actuels = {"Re min": f"{limite_elastique_min} MPa", "Young min": f"{module_young_min} GPa", "Durete min": f"{durete_min} HRC", "CO2 max": f"{empreinte_co2_max} kg/kg"}
             pdf_etude = generer_pdf_etude(df_filtre, criteres_actuels, type_indice)
             st.download_button("📄 Télécharger l'Étude (PDF)", data=pdf_etude, file_name="Etude_Faisabilite.pdf", mime="application/pdf", type="primary")
 
