@@ -17,17 +17,19 @@ st.set_page_config(page_title="MatSwap", page_icon="🔄", layout="wide")
 # --- TITRE SAAS PREMIUM (CSS) ---
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght=700;800&display=swap');
-        .main-title {
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&display=swap');
+        .main-title-container {
             font-family: 'Poppins', sans-serif;
             font-size: 3.5rem;
             font-weight: 800;
-            background: -webkit-linear-gradient(45deg, #2563EB, #14B8A6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
             margin-bottom: 0px;
             padding-bottom: 0px;
             line-height: 1.2;
+        }
+        .text-gradient {
+            background: -webkit-linear-gradient(45deg, #2563EB, #14B8A6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .subtitle {
             font-family: 'Inter', sans-serif;
@@ -37,7 +39,7 @@ st.markdown("""
             margin-top: 5px;
         }
     </style>
-    <div class='main-title'>🔄 MatSwap</div>
+    <div class='main-title-container'>🔄 <span class='text-gradient'>MatSwap</span></div>
     <div class='subtitle'>L'intelligence artificielle au service de la substitution des matériaux.</div>
 """, unsafe_allow_html=True)
 
