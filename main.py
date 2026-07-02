@@ -569,7 +569,8 @@ with tab2:
         with c_btn2:
             # --- CONVERSION DU TABLEAU EN CSV NETTOYÉ ET TRADUIT ---
             df_export = df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP)
-            csv_bytes = df_export.to_csv(index=False, sep=';', encoding='utf-8-sig')
+            # AJOUT DU PARAMÈTRE decimal=',' POUR EXCEL EN FRANÇAIS
+            csv_bytes = df_export.to_csv(index=False, sep=';', decimal=',', encoding='utf-8-sig')
             
             st.download_button(
                 label="📊 Exporter les Données Brutes (Excel / CSV)",
