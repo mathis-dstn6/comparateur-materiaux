@@ -14,76 +14,6 @@ except ImportError:
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="EcoMetal Selector Pro", page_icon="🌱", layout="wide")
 
-# --- INJECTION DE LA CHARTE GRAPHIQUE SAAS (BLEU & BLANC) ---
-st.markdown("""
-    <style>
-        /* Fond global de l'application (Blanc/Gris clair épuré) */
-        html, body, [data-testid="stAppViewContainer"] {
-            background-color: #F8FAFC !important;
-            color: #334155 !important;
-        }
-        
-        /* En-têtes et Titres en Bleu Industriel Profond */
-        h1, h2, h3, h4, h5, h6 {
-            color: #1E3A8A !important;
-            font-family: 'Inter', 'Segoe UI', sans-serif !important;
-            font-weight: 700 !important;
-        }
-        
-        /* Barre latérale Premium (Bleu Nuit/Sombre pour le contraste) */
-        [data-testid="stSidebar"] {
-            background-color: #0F172A !important;
-            color: #F1F5F9 !important;
-        }
-        [data-testid="stSidebar"] * {
-            color: #F1F5F9 !important;
-        }
-        /* Ajustement des listes déroulantes de la sidebar pour rester lisibles */
-        [data-testid="stSidebar"] div[data-baseweb="select"] * {
-            color: #334155 !important;
-        }
-        
-        /* Boutons d'action en Bleu SaaS Vif */
-        .stButton>button {
-            background-color: #2563EB !important;
-            color: white !important;
-            border-radius: 6px !important;
-            border: none !important;
-            font-weight: 600 !important;
-            padding: 0.5rem 1rem !important;
-            transition: all 0.2s ease;
-        }
-        .stButton>button:hover {
-            background-color: #1D4ED8 !important;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
-        }
-        
-        /* Design des blocs de métriques (Effet cartes blanches) */
-        [data-testid="stMetric"] {
-            background-color: #FFFFFF !important;
-            border: 1px solid #E2E8F0 !important;
-            border-radius: 8px !important;
-            padding: 12px 20px !important;
-            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05) !important;
-        }
-        [data-testid="stMetricValue"] {
-            color: #2563EB !important;
-            font-weight: 700 !important;
-        }
-        
-        /* Style des onglets (Tabs) */
-        button[data-baseweb="tab"] {
-            font-size: 16px !important;
-            font-weight: 600 !important;
-            color: #64748B !important;
-        }
-        button[data-baseweb="tab"][aria-selected="true"] {
-            color: #2563EB !important;
-            border-bottom-color: #2563EB !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 # --- MAPPING ET TOOLTIPS ---
 DISPLAY_MAP = {
     'Nom': 'Nom de l\'Alliage', 'Famille': 'Famille Métallurgique', 'Densite': 'Densité (kg/m³)',
@@ -122,13 +52,13 @@ def charger_donnees():
 df_initial = charger_donnees()
 colonnes_brutes_affichage = list(DISPLAY_MAP.keys())
 
-# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION (AVEC SIMULATION PIÈCE) ---
+# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION ---
 def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt, prix_ref, prix_alt):
     pdf = FPDF()
     pdf.add_page()
     NOIR, GRIS = (30, 30, 30), (100, 100, 100)
     
-    pdf.set_fill_color(46, 125, 50)
+    pdf.set_fill_color(37, 99, 235) # Bleu SaaS
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 15, "RAPPORT D'AUDIT : SUBSTITUTION ECO-RESPONSABLE", ln=True, align="C", fill=True)
@@ -139,7 +69,6 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.cell(0, 6, f"Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')} par EcoMetal Selector Pro", ln=True, align="R")
     pdf.ln(5)
     
-    # MATÉRIAU ACTUEL
     pdf.set_text_color(*NOIR)
     pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(230, 230, 230)
@@ -150,9 +79,8 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.cell(0, 5, f"   - Base 1 kg : CO2 = {ref['Empreinte_CO2']} kg/kg | Prix = {ref['Prix_euro_kg']} EUR/kg | Densite = {ref['Densite']} kg/m3", ln=True)
     pdf.ln(4)
     
-    # ALTERNATIVE
     pdf.set_font("Arial", 'B', 12)
-    pdf.set_fill_color(200, 240, 200)
+    pdf.set_fill_color(219, 234, 254) # Bleu très clair
     pdf.cell(0, 8, f"  2. ALTERNATIVE RECOMMANDEE : {alt['Nom']} ({alt['Famille']})", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
     pdf.ln(2)
@@ -160,9 +88,8 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.cell(0, 5, f"   - Base 1 kg : CO2 = {alt['Empreinte_CO2']} kg/kg | Prix = {alt['Prix_euro_kg']} EUR/kg | Densite = {alt['Densite']} kg/m3", ln=True)
     pdf.ln(4)
     
-    # BILAN GLOBAL
     pdf.set_font("Arial", 'B', 12)
-    pdf.set_fill_color(255, 240, 200)
+    pdf.set_fill_color(241, 245, 249) # Gris clair SaaS
     if simuler_piece:
         pdf.cell(0, 8, f"  3. BILAN SUR PIECE REELLE (Volume constant)", ln=True, fill=True)
     else:
@@ -186,7 +113,7 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.ln(10)
     pdf.set_text_color(*GRIS)
     pdf.set_font("Arial", 'I', 9)
-    pdf.multi_cell(0, 4, "Ce document certifie la pertinence de la substitution metallurgique proposee. L'analyse croisee a ete effectuee en temps reel via le moteur d'inference EcoMetal Selector Pro, en s'appuyant sur notre base de donnees industrielle.", align="J")
+    pdf.multi_cell(0, 4, "Ce document certifie la pertinence de la substitution metallurgique proposee. L'analyse croisee a ete effectuee en temps reel via le moteur d'inference EcoMetal Selector Pro.", align="J")
     
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
@@ -196,7 +123,7 @@ def generer_pdf_etude(df_top, criteres, type_indice):
     pdf.add_page()
     NOIR, GRIS = (30, 30, 30), (100, 100, 100)
     
-    pdf.set_fill_color(25, 118, 210)
+    pdf.set_fill_color(37, 99, 235)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 15, "ETUDE DE FAISABILITE : CAHIER DES CHARGES MATERIAUX", ln=True, align="C", fill=True)
@@ -218,12 +145,12 @@ def generer_pdf_etude(df_top, criteres, type_indice):
     pdf.ln(5)
     
     pdf.set_font("Arial", 'B', 12)
-    pdf.set_fill_color(200, 220, 255)
+    pdf.set_fill_color(219, 234, 254)
     pdf.cell(0, 8, "  2. TOP 5 DES MEILLEURS CANDIDATS DETAILLES", ln=True, fill=True)
     pdf.ln(3)
     
     for i, (_, row) in enumerate(df_top.head(5).iterrows(), 1):
-        pdf.set_text_color(25, 118, 210)
+        pdf.set_text_color(37, 99, 235)
         pdf.set_font("Arial", 'B', 11)
         pdf.cell(0, 6, f"  #{i} - {row['Nom']} ({row['Famille']})", ln=True)
         pdf.set_text_color(*NOIR)
@@ -233,7 +160,7 @@ def generer_pdf_etude(df_top, criteres, type_indice):
         pdf.ln(3)
         
     pdf.set_font("Arial", 'B', 12)
-    pdf.set_fill_color(255, 240, 200)
+    pdf.set_fill_color(241, 245, 249)
     pdf.cell(0, 8, "  3. RECOMPENSES DU PANEL", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
     pdf.ln(2)
@@ -257,7 +184,7 @@ with st.expander("👋 Comment utiliser cette plateforme ? (Guide Rapide)"):
     st.markdown("""
     * **Étape 1 :** Utilisez le menu latéral pour cibler une famille de matériaux.
     * **Étape 2 :** Onglet *Substitution* pour trouver un jumeau numérique responsable en ajustant vos tolérances.
-    * **💡 Astuce Pro (Simulation Pièce) :** Activez l'interrupteur de simulation pour entrer le poids de votre pièce actuelle. L'algorithme calculera l'allègement exact généré par la différence de densité des matériaux, vous donnant l'impact CO₂ et financier réel !
+    * **💡 Astuce Pro (Simulation Pièce) :** Activez l'interrupteur de simulation pour entrer le poids de votre pièce actuelle. L'algorithme calculera l'allègement exact généré par la différence de densité.
     * **Étape 3 :** Onglet *Étude* pour définir un cahier des charges strict et exporter les meilleurs candidats.
     """)
 
@@ -351,8 +278,8 @@ with tab1:
         ]
         
         fig = go.Figure()
-        fig.add_trace(go.Scatterpolar(r=vals_ref, theta=categories, fill='toself', name=row_ref['Nom'], line_color='gray'))
-        fig.add_trace(go.Scatterpolar(r=vals_alt, theta=categories, fill='toself', name=meilleur_choix['Nom'], line_color='green'))
+        fig.add_trace(go.Scatterpolar(r=vals_ref, theta=categories, fill='toself', name=row_ref['Nom'], line_color='#94A3B8'))
+        fig.add_trace(go.Scatterpolar(r=vals_alt, theta=categories, fill='toself', name=meilleur_choix['Nom'], line_color='#2563EB'))
         fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(max(vals_alt), 120)])), showlegend=True, height=400, margin=dict(t=20, b=20))
         st.plotly_chart(fig, use_container_width=True)
 
