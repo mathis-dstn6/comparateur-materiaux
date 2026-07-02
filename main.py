@@ -83,6 +83,27 @@ def charger_donnees():
 df_initial = charger_donnees()
 colonnes_brutes_affichage = list(DISPLAY_MAP.keys())
 
+# --- CONFIGURATION DES LIMITES GLOBALES POUR LE RADAR (0 à 100) ---
+GLOBAL_MINS = df_initial[['Limite_Elastique_MPa', 'Module_Young_GPa', 'Score_Eco', 'Densite', 'Prix_euro_kg']].min()
+GLOBAL_MAXS = df_initial[['Limite_Elastique_MPa', 'Module_Young_GPa', 'Score_Eco', 'Densite', 'Prix_euro_kg']].max()
+
+def obtenir_profil_radar(row):
+    # Fonction de normalisation (on garde un fond à 10 pour éviter que le graphique s'effondre au centre)
+    def norm_plus(val, col):
+        span = GLOBAL_MAXS[col] - GLOBAL_MINS[col]
+        return 10 + 90 * (val - GLOBAL_MINS[col]) / span if span > 0 else 50
+    def norm_moins(val, col):
+        span = GLOBAL_MAXS[col] - GLOBAL_MINS[col]
+        return 10 + 90 * (GLOBAL_MAXS[col] - val) / span if span > 0 else 50
+
+    return [
+        norm_plus(row['Limite_Elastique_MPa'], 'Limite_Elastique_MPa'),
+        norm_plus(row['Module_Young_GPa'], 'Module_Young_GPa'),
+        norm_plus(row['Score_Eco'], 'Score_Eco'),
+        norm_moins(row['Densite'], 'Densite'),      # Moins dense = Meilleur score sur le radar
+        norm_moins(row['Prix_euro_kg'], 'Prix_euro_kg')  # Moins cher = Meilleur score sur le radar
+    ]
+
 # --- GÉNÉRATEUR PDF 1 : SUBSTITUTION ---
 def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt, prix_ref, prix_alt):
     pdf = FPDF()
@@ -273,40 +294,33 @@ with tab1:
         
         st.write("---")
         
-        st.markdown("### 🕸️ Comparaison visuelle des scénarios")
+        st.markdown("### 🕸️ Comparaison visuelle des scénarios (Échelle Absolue 0-100)")
         categories = ['Résistance (Re)', 'Rigidité (E)', 'Éco-Score', 'Légèreté (Inv. ρ)', 'Économie (Inv. €)']
         
         fig = go.Figure()
-        vals_ref = [100, 100, 100, 100, 100]
         
-        # 1. Matériau de Référence (Trait épais Épaisseur 4, Gris Ardoise)
+        # 1. Profil du Matériau de Référence (Gris Ardoise - Trait épais)
+        vals_ref = obtenir_profil_radar(row_ref)
         fig.add_trace(go.Scatterpolar(
             r=vals_ref, theta=categories, fill='toself', 
             name=f"Réf: {row_ref['Nom']}", 
             line=dict(color='#64748B', width=4)
         ))
         
-        # 3 couleurs ultra distinctes pour les alternatives (Bleu Électrique, Vert Émeraude, Violet Flash)
+        # 3 couleurs claires, distinctes et épaisses pour les alternatives
         colors = ['#2563EB', '#10B981', '#8B5CF6']
-        
         for idx, alt in top_alternatives.iterrows():
             pos = list(top_alternatives.index).index(idx)
-            vals_alt = [
-                (alt['Limite_Elastique_MPa'] / row_ref['Limite_Elastique_MPa']) * 100,
-                (alt['Module_Young_GPa'] / row_ref['Module_Young_GPa']) * 100,
-                (alt['Score_Eco'] / row_ref['Score_Eco']) * 100 if row_ref['Score_Eco'] > 0 else 100,
-                (row_ref['Densite'] / alt['Densite']) * 100,       
-                (row_ref['Prix_euro_kg'] / alt['Prix_euro_kg']) * 100 
-            ]
+            vals_alt = obtenir_profil_radar(alt)
             
-            # Application systématique du remplissage et de l'épaisseur à 3 pour TOUS
             fig.add_trace(go.Scatterpolar(
                 r=vals_alt, theta=categories, fill='toself', 
-                name=f"#{pos+1} {alt['Nom']}", 
+                name=f"###{pos+1} {alt['Nom']}", 
                 line=dict(color=colors[pos], width=3)
             ))
             
-        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 150])), showlegend=True, height=500, margin=dict(t=20, b=20))
+        # L'échelle est désormais proprement fixée de 0 à 100 selon les limites de ta base
+        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=True, height=500, margin=dict(t=20, b=20))
         st.plotly_chart(fig, use_container_width=True)
 
         meilleur_choix = top_alternatives.iloc[0]
