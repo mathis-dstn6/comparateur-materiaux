@@ -105,7 +105,7 @@ def obtenir_profil_radar(row):
         norm_moins(row['Prix_euro_kg'], 'Prix_euro_kg')  
     ]
 
-# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION (AVEC GRAPHIQUES INTEGRÉS) ---
+# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION ---
 def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt, prix_ref, prix_alt, fig_radar, fig_ashby):
     pdf = FPDF()
     pdf.add_page()
@@ -164,7 +164,6 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     pdf.cell(0, 6, f"   -> Score Eco-Conception : +{alt['Score_Eco'] - ref['Score_Eco']} points", ln=True)
     pdf.ln(6)
     
-    # --- SECTION NOUVELLE : ENREGISTREMENT ET INJECTION DES GRAPHES ---
     pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(0, 8, "  4. ANALYSES GRAPHIQUES RAPPORTÉES", ln=True, fill=True)
@@ -173,29 +172,22 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     try:
         import tempfile
         import os
-        
-        # Capture de la toile d'araignée
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_radar:
             f_radar.write(fig_radar.to_image(format="png", width=550, height=450))
             path_radar = f_radar.name
-            
-        # Capture du diagramme d'Ashby
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_ashby:
             f_ashby.write(fig_ashby.to_image(format="png", width=550, height=450))
             path_ashby = f_ashby.name
         
-        # Injection côte à côte sur la largeur de la page A4 (210mm)
         y_actuel = pdf.get_y()
         pdf.image(path_radar, x=10, y=y_actuel, w=92)
         pdf.image(path_ashby, x=108, y=y_actuel, w=92)
-        pdf.ln(78)  # On descend le curseur pour ne pas écrire par-dessus les images
-        
-        # Nettoyage des fichiers temporaires du serveur
+        pdf.ln(78)
         os.unlink(path_radar)
         os.unlink(path_ashby)
     except Exception as e:
         pdf.set_font("Arial", 'I', 10)
-        pdf.cell(0, 6, "   (Installez la bibliotheque 'kaleido' pour inclure automatiquement les graphiques dans ce PDF)", ln=True)
+        pdf.cell(0, 6, "   (Graphes indisponibles sans kaleido)", ln=True)
         pdf.ln(4)
     
     pdf.ln(4)
@@ -205,8 +197,8 @@ def generer_pdf(ref, alt, simuler_piece, poids_ref, poids_alt, co2_ref, co2_alt,
     
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
-# --- GÉNÉRATEUR PDF 2 : CAHIER DES CHARGES ---
-def generer_pdf_etude(df_top, criteres, type_indice):
+# --- GÉNÉRATEUR PDF 2 : CAHIER DES CHARGES (ENRICHI AVEC GRAPHES) ---
+def generer_pdf_etude(df_top, criteres, type_indice, fig_radar, fig_ashby):
     pdf = FPDF()
     pdf.add_page()
     NOIR, GRIS = (30, 30, 30), (100, 100, 100)
@@ -233,7 +225,7 @@ def generer_pdf_etude(df_top, criteres, type_indice):
     
     pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(219, 234, 254)
-    pdf.cell(0, 8, "  2. TOP 5 DES MEILLEURS CANDIDATS", ln=True, fill=True)
+    pdf.cell(0, 8, "  2. TOP 5 DES MEILLEURS CANDIDATS DETECTES", ln=True, fill=True)
     pdf.ln(3)
     
     for i, (_, row) in enumerate(df_top.head(5).iterrows(), 1):
@@ -245,6 +237,33 @@ def generer_pdf_etude(df_top, criteres, type_indice):
         pdf.cell(0, 4, f"        Mecanique : Re = {row['Limite_Elastique_MPa']} MPa | E = {row['Module_Young_GPa']} GPa | Durete = {row['Durete_HRC']} HRC", ln=True)
         pdf.cell(0, 4, f"        RSE & Cout : CO2 = {row['Empreinte_CO2']} kg | Prix = {row['Prix_euro_kg']} EUR | Score = {row['Score_Eco']}/100", ln=True)
         pdf.ln(3)
+        
+    # INJECTION DES GRAPHES DE L'ÉTUDE DE FAISABILITÉ
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_fill_color(230, 230, 230)
+    pdf.cell(0, 8, "  3. CARTOGRAPHIE ET VISUALISATION DU CAHIER DES CHARGES", ln=True, fill=True)
+    pdf.ln(4)
+    
+    try:
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_radar:
+            f_radar.write(fig_radar.to_image(format="png", width=550, height=450))
+            path_radar = f_radar.name
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_ashby:
+            f_ashby.write(fig_ashby.to_image(format="png", width=550, height=450))
+            path_ashby = f_ashby.name
+        
+        y_actuel = pdf.get_y()
+        pdf.image(path_radar, x=10, y=y_actuel, w=92)
+        pdf.image(path_ashby, x=108, y=y_actuel, w=92)
+        pdf.ln(78)
+        os.unlink(path_radar)
+        os.unlink(path_ashby)
+    except Exception as e:
+        pdf.set_font("Arial", 'I', 10)
+        pdf.cell(0, 6, "   (Installez 'kaleido' pour inclure automatiquement les graphiques dans ce PDF)", ln=True)
+        pdf.ln(4)
         
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
@@ -357,11 +376,9 @@ with tab1:
         
         st.write("---")
         
-        # --- BLOC DE RENDU DES GRAPHES ---
         st.markdown("### 📊 Analyses Graphiques Avancées")
         col_radar, col_ashby = st.columns(2)
         
-        # 1. GENERATION RADAR CHART
         with col_radar:
             st.markdown("#### 🕸️ Profil de Performance (Échelle Absolue 0-100)")
             categories = ['Résistance (Re)', 'Rigidité (E)', 'Éco-Score', 'Légèreté (Inv. ρ)', 'Économie (Inv. €)']
@@ -388,7 +405,6 @@ with tab1:
             fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=True, height=450, margin=dict(t=20, b=20))
             st.plotly_chart(fig, use_container_width=True)
 
-        # 2. GENERATION DIAGRAMME D'ASHBY
         with col_ashby:
             st.markdown("#### 📈 Cartographie d'Ashby (vs Résistance Re)")
             axe_x_choix = st.selectbox(
@@ -427,7 +443,6 @@ with tab1:
             )
             st.plotly_chart(fig_ashby, use_container_width=True)
 
-        # --- EXPORT DU PDF (EN SÉCURISANT LES IMAGES) ---
         st.write("---")
         meilleur_choix = top_alternatives.iloc[0]
         if HAS_FPDF:
@@ -437,7 +452,6 @@ with tab1:
             prix_ref_tot = row_ref['Prix_euro_kg'] * poids_actuel
             prix_alt_tot = meilleur_choix['Prix_euro_kg'] * poids_alt_best
             
-            # On envoie les figures HTML à la fonction PDF pour qu'elle puisse tenter de les dessiner
             pdf_bytes = generer_pdf(
                 row_ref, meilleur_choix, simuler_piece, poids_actuel, poids_alt_best, 
                 co2_ref_tot, co2_alt_tot, prix_ref_tot, prix_alt_tot, fig, fig_ashby
@@ -447,7 +461,7 @@ with tab1:
     else:
         st.info("Aucune alternative trouvée. Essayez d'élargir les tolérances.")
 
-# --- ONGLET 2 : FILTRAGE STRICT & CAHIER DES CHARGES ---
+# --- ONGLET 2 : FILTRAGE STRICT & CAHIER DES CHARGES (ENRICHI) ---
 with tab2:
     st.header("Étude de Faisabilité & Cahier des Charges")
     type_indice = st.selectbox("Indice d'Ashby :", ["Aucun - Tri standard", "Traction pure (Max Re / ρ)", "Flexion pure (Max √Re / ρ)"])
@@ -479,10 +493,75 @@ with tab2:
     elif type_indice == "Flexion pure (Max √Re / ρ)": df_filtre = df_filtre.sort_values(by='Indice_Flexion', ascending=False)
 
     st.subheader(f"📊 {len(df_filtre)} matériau(x) valide(s)")
+    
     if not df_filtre.empty:
+        top_etude = df_filtre.head(3)
+        
+        # --- BLOC GRAPHES AJOUTÉ DANS L'ONGLET ÉTUDE ---
+        st.markdown("### 📊 Analyses Graphiques du Cahier des Charges")
+        col_radar_e, col_ashby_e = st.columns(2)
+        
+        with col_radar_e:
+            st.markdown("#### 🕸️ Profil des 3 Meilleurs Candidats Répondants (0-100)")
+            fig_radar_e = go.Figure()
+            colors_e = ['#2563EB', '#10B981', '#8B5CF6']
+            categories = ['Résistance (Re)', 'Rigidité (E)', 'Éco-Score', 'Légèreté (Inv. ρ)', 'Économie (Inv. €)']
+            
+            for idx, alt in top_etude.iterrows():
+                pos = list(top_etude.index).index(idx)
+                vals_alt = obtenir_profil_radar(alt)
+                fig_radar_e.add_trace(go.Scatterpolar(
+                    r=vals_alt, theta=categories, fill='toself',
+                    name=f"#{pos+1} {alt['Nom']}",
+                    line=dict(color=colors_e[pos], width=3)
+                ))
+            fig_radar_e.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=True, height=450, margin=dict(t=20, b=20))
+            st.plotly_chart(fig_radar_e, use_container_width=True)
+            
+        with col_ashby_e:
+            st.markdown("#### 📈 Positionnement d'Ashby (Filtrage en bloc)")
+            axe_x_e = st.selectbox(
+                "Variable de l'Axe X (Étude) :",
+                ["Densite", "Prix_euro_kg", "Empreinte_CO2"],
+                format_func=lambda x: DISPLAY_MAP[x],
+                key="axe_x_etude"
+            )
+            
+            fig_ashby_e = go.Figure()
+            # 1. Fond du catalogue complet (Très atténué)
+            for famille, group in df_initial.groupby('Famille'):
+                fig_ashby_e.add_trace(go.Scatter(
+                    x=group[axe_x_e], y=group['Limite_Elastique_MPa'],
+                    mode='markers', name=famille, marker=dict(size=6, opacity=0.10), text=group['Nom'],
+                    showlegend=False
+                ))
+            # 2. Le nuage complet des matériaux qui valident les critères (Vert Émeraude doux)
+            fig_ashby_e.add_trace(go.Scatter(
+                x=df_filtre[axe_x_e], y=df_filtre['Limite_Elastique_MPa'],
+                mode='markers', name="Solutions Valides", marker=dict(color='#14B8A6', size=8, opacity=0.5),
+                text=df_filtre['Nom'], hovertemplate="<b>%{text}</b><br>Valide selon critères<extra></extra>"
+            ))
+            # 3. Le podium final (Gros points d'accents)
+            for idx, alt in top_etude.iterrows():
+                pos = list(top_etude.index).index(idx)
+                fig_ashby_e.add_trace(go.Scatter(
+                    x=[alt[axe_x_e]], y=[alt['Limite_Elastique_MPa']],
+                    mode='markers', name=f"Podium #{pos+1} {alt['Nom']}",
+                    marker=dict(color=colors_e[pos], size=13, symbol='circle', line=dict(color='white', width=2)), text=[alt['Nom']],
+                    hovertemplate="<b>%{text} (Top #"+str(pos+1)+")</b><br>Re : %{y} MPa<extra></extra>"
+                ))
+            fig_ashby_e.update_layout(
+                xaxis_title=DISPLAY_MAP[axe_x_e], yaxis_title="Limite Élastique Re (MPa)", showlegend=True, height=400,
+                margin=dict(t=10, b=10), plot_bgcolor='rgba(241,245,249,0.5)', paper_bgcolor='rgba(0,0,0,0)'
+            )
+            st.plotly_chart(fig_ashby_e, use_container_width=True)
+
+        st.write("---")
+
+        # EXPORT DU NOUVEAU PDF D'ÉTUDE ENRICHI
         if HAS_FPDF:
             criteres_actuels = {"Re min": f"{limite_elastique_min} MPa", "Young min": f"{module_young_min} GPa", "Durete min": f"{durete_min} HRC", "CO2 max": f"{empreinte_co2_max} kg/kg"}
-            pdf_etude = generer_pdf_etude(df_filtre, criteres_actuels, type_indice)
-            st.download_button("📄 Télécharger l'Étude (PDF)", data=pdf_etude, file_name="Etude_Faisabilite.pdf", mime="application/pdf", type="primary")
+            pdf_etude = generer_pdf_etude(df_filtre, criteres_actuels, type_indice, fig_radar_e, fig_ashby_e)
+            st.download_button("📄 Télécharger l'Étude de Faisabilité Enrichie (PDF)", data=pdf_etude, file_name="Etude_Faisabilite.pdf", mime="application/pdf", type="primary")
 
         st.dataframe(df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP).head(20), use_container_width=True)
