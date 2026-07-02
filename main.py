@@ -54,7 +54,7 @@ DISPLAY_MAP = {
 }
 
 HELP_RE = "Limite Élastique (Re) : Contrainte maximale avant déformation irréversible."
-HELP_YOUNG = "Module de Young (E) : Mesure la rigidité. Plus il éelevé, moins la pièce fléchira."
+HELP_YOUNG = "Module de Young (E) : Mesure la rigidité. Plus il élevé, moins la pièce fléchira."
 HELP_DURETE = "Dureté Rockwell (C) : Résistance à la pénétration. Crucial pour l'usure et le frottement."
 HELP_CO2 = "Kilos de CO₂ émis pour produire 1 kg de cet alliage."
 HELP_PRIX = "Prix estimatif sur le marché industriel européen."
@@ -85,7 +85,7 @@ def charger_donnees():
 df_initial = charger_donnees()
 colonnes_brutes_affichage = list(DISPLAY_MAP.keys())
 
-# --- CONFIGURATION DES LIMITES GLOBALES POUR LE RADAR (0 à 100) ---
+# --- CONFIGURATION DES LIMITES GLOBALES POUR LE RADAR ---
 GLOBAL_MINS = df_initial[['Limite_Elastique_MPa', 'Module_Young_GPa', 'Score_Eco', 'Densite', 'Prix_euro_kg']].min()
 GLOBAL_MAXS = df_initial[['Limite_Elastique_MPa', 'Module_Young_GPa', 'Score_Eco', 'Densite', 'Prix_euro_kg']].max()
 
@@ -105,7 +105,7 @@ def obtenir_profil_radar(row):
         norm_moins(row['Prix_euro_kg'], 'Prix_euro_kg')  
     ]
 
-# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION ENRICHIE (TOP 3 COMPLET) ---
+# --- GÉNÉRATEUR PDF 1 : SUBSTITUTION ENRICHIE ---
 def generer_pdf(ref, top_alternatives, simuler_piece, poids_actuel, fig_radar, fig_ashby):
     pdf = FPDF()
     pdf.add_page()
@@ -119,21 +119,19 @@ def generer_pdf(ref, top_alternatives, simuler_piece, poids_actuel, fig_radar, f
     
     pdf.set_text_color(*GRIS)
     pdf.set_font("Arial", 'I', 10)
-    pdf.cell(0, 6, f"Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')} via MatSwap", ln=True, align="R")
+    pdf.cell(0, 6, f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')} via MatSwap", ln=True, align="R")
     pdf.ln(5)
     
-    # 1. Matériau de Référence
     pdf.set_text_color(*NOIR)
     pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(0, 8, f"  1. MATERIAU DE REFERENCE : {ref['Nom']} ({ref['Famille']})", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
     pdf.ln(2)
-    pdf.cell(0, 5, f"   - Mecanique : Re = {ref['Limite_Elastique_MPa']} MPa | E = {ref['Module_Young_GPa']} GPa | Durete = {ref['Durete_HRC']} HRC", ln=True)
-    pdf.cell(0, 5, f"   - Base 1 kg : CO2 = {ref['Empreinte_CO2']} kg/kg | Prix = {ref['Prix_euro_kg']} EUR/kg | Densite = {ref['Densite']} kg/m3", ln=True)
+    pdf.cell(0, 5, f"   - Mécanique : Re = {ref['Limite_Elastique_MPa']} MPa | E = {ref['Module_Young_GPa']} GPa | Dureté = {ref['Durete_HRC']} HRC", ln=True)
+    pdf.cell(0, 5, f"   - Base 1 kg : CO2 = {ref['Empreinte_CO2']} kg/kg | Prix = {ref['Prix_euro_kg']} EUR/kg | Densité = {ref['Densite']} kg/m³", ln=True)
     pdf.ln(4)
     
-    # 2. Boucle sur le Top 3 complet des alternatives
     pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(219, 234, 254)
     pdf.cell(0, 8, "  2. CLASSEMENT DES MEILLEURES ALTERNATIVES ELIGIBLES", ln=True, fill=True)
@@ -142,7 +140,7 @@ def generer_pdf(ref, top_alternatives, simuler_piece, poids_actuel, fig_radar, f
     for idx, (_, alt) in enumerate(top_alternatives.iterrows(), 1):
         pdf.set_font("Arial", 'B', 11)
         pdf.set_text_color(37, 99, 235)
-        pdf.cell(0, 6, f"   Scenario #{idx} : {alt['Nom']} ({alt['Famille']})", ln=True)
+        pdf.cell(0, 6, f"   Scénario #{idx} : {alt['Nom']} ({alt['Famille']})", ln=True)
         pdf.set_text_color(*NOIR)
         pdf.set_font("Arial", '', 10)
         
@@ -154,16 +152,15 @@ def generer_pdf(ref, top_alternatives, simuler_piece, poids_actuel, fig_radar, f
         
         diff_co2 = co2_ref_tot - co2_alt_tot
         diff_prix = prix_ref_tot - prix_alt_tot
-        unite = "piece" if simuler_piece else "kg"
+        unite = "pièce" if simuler_piece else "kg"
         
-        pdf.cell(0, 5, f"     * Proprietes : Re = {alt['Limite_Elastique_MPa']} MPa | E = {alt['Module_Young_GPa']} GPa | Durete = {alt['Durete_HRC']} HRC", ln=True)
+        pdf.cell(0, 5, f"     * Propriétés : Re = {alt['Limite_Elastique_MPa']} MPa | E = {alt['Module_Young_GPa']} GPa | Dureté = {alt['Durete_HRC']} HRC", ln=True)
         if simuler_piece:
-            pdf.cell(0, 5, f"     * Poids estime de la piece : {poids_alt:.2f} kg (vs {poids_actuel:.2f} kg pour la reference)", ln=True)
-        pdf.cell(0, 5, f"     * Bilan Carbone : {'Economie' if diff_co2>0 else 'Surcout'} de {abs(diff_co2):.2f} kg CO2 / {unite}", ln=True)
-        pdf.cell(0, 5, f"     * Bilan Financier : {'Economie' if diff_prix>0 else 'Surcout'} de {abs(diff_prix):.2f} EUR / {unite}", ln=True)
+            pdf.cell(0, 5, f"     * Poids estimé de la pièce : {poids_alt:.2f} kg (vs {poids_actuel:.2f} kg pour la référence)", ln=True)
+        pdf.cell(0, 5, f"     * Bilan Carbone : {'Économie' if diff_co2>0 else 'Surcoût'} de {abs(diff_co2):.2f} kg CO2 / {unite}", ln=True)
+        pdf.cell(0, 5, f"     * Bilan Financier : {'Économie' if diff_prix>0 else 'Surcoût'} de {abs(diff_prix):.2f} EUR / {unite}", ln=True)
         pdf.ln(3)
         
-    # 3. Section Graphiques
     pdf.set_font("Arial", 'B', 12)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(0, 8, "  3. CARTOGRAPHIE ET VISUALISATION DU CONTEXTE", ln=True, fill=True)
@@ -193,7 +190,7 @@ def generer_pdf(ref, top_alternatives, simuler_piece, poids_actuel, fig_radar, f
     pdf.ln(4)
     pdf.set_text_color(*GRIS)
     pdf.set_font("Arial", 'I', 9)
-    pdf.multi_cell(0, 4, "Ce document certifie la pertinence de la substitution. Analyse effectuee en temps reel via le moteur MatSwap.", align="J")
+    pdf.multi_cell(0, 4, "Ce document certifie la pertinence de la substitution. Analyse effectuée en temps réel via le moteur MatSwap.", align="J")
     
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
@@ -211,7 +208,7 @@ def generer_pdf_etude(df_top, criteres, type_indice, fig_radar, fig_ashby):
     
     pdf.set_text_color(*GRIS)
     pdf.set_font("Arial", 'I', 10)
-    pdf.cell(0, 6, f"Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')} via MatSwap", ln=True, align="R")
+    pdf.cell(0, 6, f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')} via MatSwap", ln=True, align="R")
     pdf.ln(5)
     
     pdf.set_text_color(*NOIR)
@@ -234,8 +231,8 @@ def generer_pdf_etude(df_top, criteres, type_indice, fig_radar, fig_ashby):
         pdf.cell(0, 6, f"  #{i} - {row['Nom']} ({row['Famille']})", ln=True)
         pdf.set_text_color(*NOIR)
         pdf.set_font("Arial", '', 9)
-        pdf.cell(0, 4, f"        Mecanique : Re = {row['Limite_Elastique_MPa']} MPa | E = {row['Module_Young_GPa']} GPa | Durete = {row['Durete_HRC']} HRC", ln=True)
-        pdf.cell(0, 4, f"        RSE & Cout : CO2 = {row['Empreinte_CO2']} kg | Prix = {row['Prix_euro_kg']} EUR | Score = {row['Score_Eco']}/100", ln=True)
+        pdf.cell(0, 4, f"        Mécanique : Re = {row['Limite_Elastique_MPa']} MPa | E = {row['Module_Young_GPa']} GPa | Dureté = {row['Durete_HRC']} HRC", ln=True)
+        pdf.cell(0, 4, f"        RSE & Coût : CO2 = {row['Empreinte_CO2']} kg | Prix = {row['Prix_euro_kg']} EUR | Score = {row['Score_Eco']}/100", ln=True)
         pdf.ln(3)
         
     pdf.set_font("Arial", 'B', 12)
@@ -277,7 +274,6 @@ with st.expander("👋 Guide Rapide de MatSwap"):
     """)
 
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2942/2942232.png", width=80) 
     st.header("⚙️ Configuration")
     famille_choisie = st.selectbox("Filtrer par famille :", ['Toutes'] + sorted(df_initial['Famille'].unique().tolist()))
     
@@ -304,7 +300,7 @@ with tab1:
     col_sel, col_tol = st.columns([1, 2])
     with col_sel:
         liste_materiaux = sorted(df_recherche['Nom'].tolist())
-        materiau_ref = st.selectbox("Sélectionnez le matériau de référence (tapez pour chercher) :", liste_materiaux)
+        materiau_ref = st.selectbox("Sélectionnez le matériau de référence :", liste_materiaux)
         row_ref = df_initial[df_initial['Nom'] == materiau_ref].iloc[0]
         
     with col_tol:
@@ -435,43 +431,47 @@ with tab1:
                     marker=dict(color=colors[pos], size=13, symbol='circle', line=dict(color='white', width=2)), text=[alt['Nom']],
                     hovertemplate="<b>%{text} (Alternative #"+str(pos+1)+")</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
                 ))
-             if not df_alt.empty:
-        top_alternatives = df_alt.head(3)   
+                
             fig_ashby.update_layout(
                 xaxis_title=DISPLAY_MAP[axe_x_choix], yaxis_title="Limite Élastique Re (MPa)", showlegend=True, height=400,
                 margin=dict(t=10, b=10), plot_bgcolor='rgba(241,245,249,0.5)', paper_bgcolor='rgba(0,0,0,0)'
             )
             st.plotly_chart(fig_ashby, use_container_width=True)
 
-        # --- TELECHARGEMENT DU NOUVEAU RAPPORT DE SUBSTITUTION ENRICHI ---
+        # --- TELECHARGEMENT EN PDF ET CSV ALIGNES ---
         st.write("---")
+        col_pdf, col_csv = st.columns(2)
         
- # 1. On définit les colonnes ICI, juste avant de les utiliser
-    col_pdf, col_csv = st.columns(2)
-    
-    # 2. Maintenant on peut utiliser ces variables sans erreur
-    with col_pdf:
-        if HAS_FPDF:
-            pdf_bytes = generer_pdf(row_ref, top_alternatives, simuler_piece, poids_actuel, fig, fig_ashby)
+        with col_pdf:
+            if HAS_FPDF:
+                pdf_bytes = generer_pdf(row_ref, top_alternatives, simuler_piece, poids_actuel, fig, fig_ashby)
+                st.download_button(
+                    label="📄 Exporter le Rapport d'Audit (PDF)", 
+                    data=pdf_bytes, 
+                    file_name="Rapport_Substitution_MatSwap.pdf", 
+                    mime="application/pdf", 
+                    use_container_width=True
+                )
+        
+        with col_csv:
+            df_export_sub = top_alternatives.copy()
+            df_export_sub['Gain_CO2_Pct'] = ((row_ref['Empreinte_CO2'] - df_export_sub['Empreinte_CO2']) / row_ref['Empreinte_CO2']) * 100
+            df_export_sub['Gain_Prix_Pct'] = ((row_ref['Prix_euro_kg'] - df_export_sub['Prix_euro_kg']) / row_ref['Prix_euro_kg']) * 100
+            
+            df_export_sub = df_export_sub[colonnes_brutes_affichage + ['Gain_CO2_Pct', 'Gain_Prix_Pct']].rename(
+                columns={**DISPLAY_MAP, 'Gain_CO2_Pct': 'Gain CO2 (%)', 'Gain_Prix_Pct': 'Gain Prix (%)'}
+            )
+            
+            csv_sub_bytes = df_export_sub.to_csv(index=False, sep=';', decimal=',', encoding='utf-8-sig')
+            
             st.download_button(
-                label="📄 Exporter le Rapport d'Audit (PDF)", 
-                data=pdf_bytes, 
-                file_name="Rapport_Substitution_MatSwap.pdf", 
-                mime="application/pdf", 
+                label="📊 Exporter le Top 3 (Excel / CSV)",
+                data=csv_sub_bytes,
+                file_name="Top_3_Substitutions.csv",
+                mime="text/csv",
                 use_container_width=True
             )
-    
-    with col_csv:
-        # ... (ton code de préparation CSV) ...
-        df_export_sub = top_alternatives.copy()
-        # ... (le reste de ton code CSV) ...
-        st.download_button(
-            label="📊 Exporter le Top 3 (Excel / CSV)",
-            data=csv_sub_bytes,
-            file_name="Top_3_Substitutions.csv",
-            mime="text/csv",
-            use_container_width=True
-        ) 
+            
     else:
         st.info("Aucune alternative trouvée. Essayez d'élargir les tolérances.")
 
@@ -509,7 +509,7 @@ with tab2:
     st.subheader(f"📊 {len(df_filtre)} matériau(x) valide(s)")
     
     if not df_filtre.empty:
-        top_etude = df_filtre.head(3)
+        top_etude = df_filtre.head(5)
         
         st.markdown("### 📊 Analyses Graphiques du Cahier des Charges")
         col_radar_e, col_ashby_e = st.columns(2)
@@ -520,8 +520,8 @@ with tab2:
             colors_e = ['#2563EB', '#10B981', '#8B5CF6']
             categories = ['Résistance (Re)', 'Rigidité (E)', 'Éco-Score', 'Légèreté (Inv. ρ)', 'Économie (Inv. €)']
             
-            for idx, alt in top_etude.iterrows():
-                pos = list(top_etude.index).index(idx)
+            for idx, alt in df_filtre.head(3).iterrows():
+                pos = list(df_filtre.head(3).index).index(idx)
                 vals_alt = obtenir_profil_radar(alt)
                 fig_radar_e.add_trace(go.Scatterpolar(
                     r=vals_alt, theta=categories, fill='toself',
@@ -548,8 +548,8 @@ with tab2:
                 mode='markers', name="Solutions Valides", marker=dict(color='#14B8A6', size=8, opacity=0.5),
                 text=df_filtre['Nom'], hovertemplate="<b>%{text}</b><br>Valide selon critères<extra></extra>"
             ))
-            for idx, alt in top_etude.iterrows():
-                pos = list(top_etude.index).index(idx)
+            for idx, alt in df_filtre.head(3).iterrows():
+                pos = list(df_filtre.head(3).index).index(idx)
                 fig_ashby_e.add_trace(go.Scatter(
                     x=[alt[axe_x_e]], y=[alt['Limite_Elastique_MPa']],
                     mode='markers', name=f"Podium #{pos+1} {alt['Nom']}",
@@ -563,7 +563,6 @@ with tab2:
             st.plotly_chart(fig_ashby_e, use_container_width=True)
 
         st.write("---")
-
         c_btn1, c_btn2 = st.columns(2)
         
         with c_btn1:
@@ -571,9 +570,9 @@ with tab2:
                 criteres_actuels = {
                     "Re min": f"{limite_elastique_min} MPa", 
                     "Young min": f"{module_young_min} GPa", 
-                    "Durete min": f"{durete_min} HRC", 
+                    "Dureté min": f"{durete_min} HRC", 
                     "Temp. Fusion min": f"{temp_fusion_min} °C",
-                    "Conductivite min": f"{conductivite_min} W/m.K",
+                    "Conductivité min": f"{conductivite_min} W/m.K",
                     "CO2 max": f"{empreinte_co2_max} kg/kg",
                     "Prix max": f"{prix_max} EUR/kg"
                 }
@@ -583,13 +582,6 @@ with tab2:
         with c_btn2:
             df_export = df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP)
             csv_bytes = df_export.to_csv(index=False, sep=';', decimal=',', encoding='utf-8-sig')
-            
-            st.download_button(
-                label="📊 Exporter les Données Brutes (Excel / CSV)",
-                data=csv_bytes,
-                file_name="Cahier_des_Charges_MatSwap.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
+            st.download_button(label="📊 Exporter les Données Brutes (Excel / CSV)", data=csv_bytes, file_name="Cahier_des_Charges_MatSwap.csv", mime="text/csv", use_container_width=True)
 
         st.dataframe(df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP).head(20), use_container_width=True)
