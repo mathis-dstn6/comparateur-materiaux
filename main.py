@@ -14,7 +14,7 @@ except ImportError:
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="MatSwap", page_icon="🔄", layout="wide")
 
-# --- TITRE SAAS PREMIUM ET STYLISATION DES BOUTONS (CSS BLINDÉ) ---
+# --- TITRE SAAS PREMIUM ET STYLISATION DES BOUTONS (CSS BLINDÉ CHRONO) ---
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght=700;800&display=swap');
@@ -39,28 +39,28 @@ st.markdown("""
             margin-top: 5px;
         }
         
-        /* FORCE LE BOUTON DE LA 1ÈRE COLONNE EN BLEU (PDF) */
-        div[data-testid="column"]:nth-child(1) div.stDownloadButton button {
+        /* CIBLE LE BOUTON PDF VIA L'ÉMOJI ET LE COLOURE EN BLEU */
+        button[p-id] p:contains("📄"), button p:contains("📄") {
+            background-color: #2563EB !important;
+            color: white !important;
+        }
+        div.stDownloadButton button:has(p:contains("📄")) {
             background-color: #2563EB !important;
             color: white !important;
             border: none !important;
-            border-radius: 6px !important;
-            padding: 0.5rem 1rem !important;
         }
-        div[data-testid="column"]:nth-child(1) div.stDownloadButton button:hover {
+        div.stDownloadButton button:has(p:contains("📄")):hover {
             background-color: #1D4ED8 !important;
             color: white !important;
         }
         
-        /* FORCE LE BOUTON DE LA 2ÈME COLONNE EN VERT (EXCEL / CSV) */
-        div[data-testid="column"]:nth-child(2) div.stDownloadButton button {
+        /* CIBLE LE BOUTON EXCEL/CSV VIA L'ÉMOJI ET LE COLOURE EN VERT */
+        div.stDownloadButton button:has(p:contains("📊")) {
             background-color: #10B981 !important;
             color: white !important;
             border: none !important;
-            border-radius: 6px !important;
-            padding: 0.5rem 1rem !important;
         }
-        div[data-testid="column"]:nth-child(2) div.stDownloadButton button:hover {
+        div.stDownloadButton button:has(p:contains("📊")):hover {
             background-color: #059669 !important;
             color: white !important;
         }
@@ -82,7 +82,7 @@ DISPLAY_MAP = {
 HELP_RE = "Limite Élastique (Re) : Contrainte maximale avant déformation irréversible."
 HELP_YOUNG = "Module de Young (E) : Mesure la rigidité. Plus il élevé, moins la pièce fléchira."
 HELP_DURETE = "Dureté Rockwell (C) : Résistance à la pénétration. Crucial pour l'usure et le frottement."
-HELP_CO2 = "Kilos de CO₂ émis pour Unicodeproduire 1 kg de cet alliage."
+HELP_CO2 = "Kilos de CO₂ émis pour produire 1 kg de cet alliage."
 HELP_PRIX = "Prix estimatif sur le marché industriel européen."
 HELP_SCORE = "Note sur 100 valorisant les matériaux bas carbone et hautement recyclables."
 
@@ -289,7 +289,7 @@ def generer_pdf_etude(df_top, criteres, type_indice, fig_radar, fig_ashby):
         
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
-# --- CHARGEMENT DE LA BASE DE DONNÉES ---
+# --- CONFIGURATION DES LIMITES GLOBALES POUR LE RADAR ---
 df_initial = charger_donnees()
 colonnes_brutes_affichage = list(DISPLAY_MAP.keys())
 
@@ -459,7 +459,7 @@ with tab1:
             )
             st.plotly_chart(fig_ashby, use_container_width=True)
 
-        # --- BLOC D'EXPORTATION ---
+        # --- BLOC D'EXPORTATION CHRONO ---
         st.write("---")
         col_pdf, col_csv = st.columns(2)
         
