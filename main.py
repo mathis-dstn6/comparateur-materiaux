@@ -63,32 +63,50 @@ HELP_SCORE = "Note sur 100 valorisant les matériaux bas carbone et hautement re
 # --- CHARGEMENT DE LA NOUVELLE BASE DE DONNÉES CERTIFIÉE ---
 @st.cache_data
 def charger_donnees():
-    # Modification ici pour cibler le nouveau fichier CSV
+    # Lecture de ton nouveau fichier certifié
     df = pd.read_csv('alliages_certifies.csv', sep=';')
     
-    # Sécurités de base au cas où certaines données soient manquantes
-    if 'Famille' not in df.columns: df['Famille'] = 'Non spécifié'
-    if 'Durete_HRC' not in df.columns: df['Durete_HRC'] = 0.0
+    # 1. CARTOGRAPHIE INTELLIGENTE : Traduit automatiquement les colonnes de Claude
+    mapping = {}
+    for col in df.columns:
+        c = col.lower()
+        if 'nom' in c: mapping[col] = 'Nom'
+        elif 'famille' in c: mapping[col] = 'Famille'
+        elif 'dens' in c: mapping[col] = 'Densite'
+        elif 'young' in c or 'rigid' in c: mapping[col] = 'Module_Young_GPa'
+        elif 'elast' in c or 're' in c: mapping[col] = 'Limite_Elastique_MPa'
+        elif 'duret' in c or 'hrc' in c: mapping[col] = 'Durete_HRC'
+        elif 'fusion' in c or 'temp' in c: mapping[col] = 'Temp_Fusion_C'
+        elif 'conduct' in c: mapping[col] = 'Conductivite_Thermique_W_mK'
+        elif 'co2' in c or 'carbone' in c or 'empreinte' in c: mapping[col] = 'Empreinte_CO2'
+        elif 'recycl' in c: mapping[col] = 'Recyclabilite_pct'
+        elif 'prix' in c or 'euro' in c or 'cout' in c or 'coût' in c: mapping[col] = 'Prix_euro_kg'
         
-    colonnes_tri = ['Densite', 'Module_Young_GPa', 'Limite_Elastique_MPa', 'Durete_HRC', 'Empreinte_CO2', 'Prix_euro_kg', 'Temp_Fusion_C', 'Conductivite_Thermique_W_mK', 'Recyclabilite_pct']
-    for col in colonnes_tri:
-        if col in df.columns: 
-            # Remplacement des zéros par une valeur infime pour éviter les divisions par zéro
-            df[col] = df[col].replace(0, 1e-6)
-            
-    # Calcul des indices d'Ashby
-    if 'Limite_Elastique_MPa' in df.columns and 'Densite' in df.columns:
-        df['Indice_Traction'] = df['Limite_Elastique_MPa'] / df['Densite']
-        df['Indice_Flexion'] = np.sqrt(df['Limite_Elastique_MPa']) / df['Densite']
+    df = df.rename(columns=mapping)
     
-    # Calcul du score éco-conception
-    def calc_eco_score(row):
-        try:
-            return max(0, min(100, int((row.get('Recyclabilite_pct', 0) / 100) * (5 / row.get('Empreinte_CO2', 1e-6)) * 100)))
-        except:
-            return 50
-        
-    df['Score_Eco'] = df.apply(calc_eco_score, axis=1)
+    # 2. BOUCLIER DE SÉCURITÉ : Si une colonne optionnelle manque, on injecte des valeurs réalistes
+    colonnes_requises = {
+        'Nom': 'Alliage Inconnu', 'Famille': 'Non spécifié', 'Densite': 7800.0,
+        'Module_Young_GPa': 200.0, 'Limite_Elastique_MPa': 300.0, 'Durete_HRC': 0.0,
+        'Temp_Fusion_C': 1400.0, 'Conductivite_Thermique_W_mK': 45.0,
+        'Empreinte_CO2': 2.5, 'Recyclabilite_pct': 85.0, 'Prix_euro_kg': 6.0
+    }
+    
+    for col, val_defaut in colonnes_requises.items():
+        if col not in df.columns:
+            df[col] = val_defaut
+            
+    # 3. NETTOYAGE DES ZÉROS : Évite les divisions par zéro fatales
+    colonnes_numeriques = ['Densite', 'Module_Young_GPa', 'Limite_Elastique_MPa', 'Durete_HRC', 'Empreinte_CO2', 'Prix_euro_kg', 'Temp_Fusion_C', 'Conductivite_Thermique_W_mK', 'Recyclabilite_pct']
+    for col in colonnes_numeriques:
+        df[col] = df[col].replace(0, 1e-6)
+            
+    # 4. CALCULS DES INDICES METIER & ECO-SCORE
+    df['Indice_Traction'] = df['Limite_Elastique_MPa'] / df['Densite']
+    df['Indice_Flexion'] = np.sqrt(df['Limite_Elastique_MPa']) / df['Densite']
+    
+    df['Score_Eco'] = df.apply(lambda row: max(0, min(100, int((row['Recyclabilite_pct'] / 100) * (5 / row['Empreinte_CO2']) * 100))), axis=1)
+    
     return df
 
 df_initial = charger_donnees()
