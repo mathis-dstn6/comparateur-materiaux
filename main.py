@@ -14,7 +14,7 @@ except ImportError:
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="MatSwap", page_icon="🔄", layout="wide")
 
-# --- TITRE SAAS PREMIUM ET STYLISATION DES BOUTONS (CSS VALIDE ET BLINDÉ) ---
+# --- TITRE SAAS PREMIUM ---
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght=700;800&display=swap');
@@ -38,36 +38,6 @@ st.markdown("""
             margin-bottom: 30px;
             margin-top: 5px;
         }
-        
-        /* COULEUR BLEUE POUR LE BOUTON DANS LA 1ÈRE COLONNE (PDF) */
-        div[data-testid="column"]:nth-of-type(1) .stDownloadButton button,
-        div[data-testid="column"]:nth-child(1) .stDownloadButton button {
-            background-color: #2563EB !important;
-            color: white !important;
-            border: none !important;
-            font-weight: 600 !important;
-            transition: background-color 0.3s ease !important;
-        }
-        div[data-testid="column"]:nth-of-type(1) .stDownloadButton button:hover,
-        div[data-testid="column"]:nth-child(1) .stDownloadButton button:hover {
-            background-color: #1D4ED8 !important;
-            color: white !important;
-        }
-        
-        /* COULEUR VERTE POUR LE BOUTON DANS LA 2ÈME COLONNE (EXCEL / CSV) */
-        div[data-testid="column"]:nth-of-type(2) .stDownloadButton button,
-        div[data-testid="column"]:nth-child(2) .stDownloadButton button {
-            background-color: #10B981 !important;
-            color: white !important;
-            border: none !important;
-            font-weight: 600 !important;
-            transition: background-color 0.3s ease !important;
-        }
-        div[data-testid="column"]:nth-of-type(2) .stDownloadButton button:hover,
-        div[data-testid="column"]:nth-child(2) .stDownloadButton button:hover {
-            background-color: #059669 !important;
-            color: white !important;
-        }
     </style>
     <div class='main-title-container'>🔄 <span class='text-gradient'>MatSwap</span></div>
     <div class='subtitle'>L'intelligence artificielle au service de la substitution des matériaux.</div>
@@ -90,30 +60,40 @@ HELP_CO2 = "Kilos de CO₂ émis pour produire 1 kg de cet alliage."
 HELP_PRIX = "Prix estimatif sur le marché industriel européen."
 HELP_SCORE = "Note sur 100 valorisant les matériaux bas carbone et hautement recyclables."
 
-# --- CHARGEMENT DES DONNÉES ---
+# --- CHARGEMENT DE LA NOUVELLE BASE DE DONNÉES CERTIFIÉE ---
 @st.cache_data
 def charger_donnees():
-    df = pd.read_csv('alliages_metalliques_4_2.csv', sep=';')
-    if 'Famille' not in df.columns: df['Famille'] = 'Non spécifié'
+    # Modification ici pour cibler le nouveau fichier CSV
+    df = pd.read_csv('alliages_certifies.csv', sep=';')
     
-    if 'Durete_HRC' not in df.columns:
-        df['Durete_HRC'] = 0.0
+    # Sécurités de base au cas où certaines données soient manquantes
+    if 'Famille' not in df.columns: df['Famille'] = 'Non spécifié'
+    if 'Durete_HRC' not in df.columns: df['Durete_HRC'] = 0.0
         
     colonnes_tri = ['Densite', 'Module_Young_GPa', 'Limite_Elastique_MPa', 'Durete_HRC', 'Empreinte_CO2', 'Prix_euro_kg', 'Temp_Fusion_C', 'Conductivite_Thermique_W_mK', 'Recyclabilite_pct']
     for col in colonnes_tri:
-        if col in df.columns: df[col] = df[col].replace(0, 1e-6)
+        if col in df.columns: 
+            # Remplacement des zéros par une valeur infime pour éviter les divisions par zéro
+            df[col] = df[col].replace(0, 1e-6)
             
-    df['Indice_Traction'] = df['Limite_Elastique_MPa'] / df['Densite']
-    df['Indice_Flexion'] = np.sqrt(df['Limite_Elastique_MPa']) / df['Densite']
+    # Calcul des indices d'Ashby
+    if 'Limite_Elastique_MPa' in df.columns and 'Densite' in df.columns:
+        df['Indice_Traction'] = df['Limite_Elastique_MPa'] / df['Densite']
+        df['Indice_Flexion'] = np.sqrt(df['Limite_Elastique_MPa']) / df['Densite']
     
+    # Calcul du score éco-conception
     def calc_eco_score(row):
-        return max(0, min(100, int((row['Recyclabilite_pct'] / 100) * (5 / row['Empreinte_CO2']) * 100)))
+        try:
+            return max(0, min(100, int((row.get('Recyclabilite_pct', 0) / 100) * (5 / row.get('Empreinte_CO2', 1e-6)) * 100)))
+        except:
+            return 50
         
     df['Score_Eco'] = df.apply(calc_eco_score, axis=1)
     return df
 
 df_initial = charger_donnees()
-colonnes_brutes_affichage = list(DISPLAY_MAP.keys())
+# Sécurisation des colonnes pour l'affichage (ne prend que celles qui existent vraiment)
+colonnes_brutes_affichage = [col for col in DISPLAY_MAP.keys() if col in df_initial.columns]
 
 # --- CONFIGURATION DES LIMITES GLOBALES POUR LE RADAR ---
 GLOBAL_MINS = df_initial[['Limite_Elastique_MPa', 'Module_Young_GPa', 'Score_Eco', 'Densite', 'Prix_euro_kg']].min()
@@ -296,7 +276,8 @@ def generer_pdf_etude(df_top, criteres, type_indice, fig_radar, fig_ashby):
 # --- INTERFACE FLUIDE ---
 with st.sidebar:
     st.header("⚙️ Configuration")
-    famille_choisie = st.selectbox("Filtrer par famille :", ['Toutes'] + sorted(df_initial['Famille'].unique().tolist()))
+    familles = ['Toutes'] + sorted(df_initial['Famille'].unique().tolist()) if 'Famille' in df_initial.columns else ['Toutes']
+    famille_choisie = st.selectbox("Filtrer par famille :", familles)
     
     st.markdown("### 🎯 Stratégie d'Optimisation")
     objectif = st.radio(
@@ -339,10 +320,10 @@ with tab1:
 
     st.markdown(f"#### 📊 Profil actuel : **{materiau_ref}**")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Score Éco", f"{row_ref['Score_Eco']} /100", help=HELP_SCORE)
-    c2.metric("Dureté Rockwell", f"{row_ref['Durete_HRC']} HRC", help=HELP_DURETE)
-    c3.metric(f"CO₂ ({'Total' if simuler_piece else 'au kg'})", f"{row_ref['Empreinte_CO2'] * poids_actuel:.1f} kg", help=HELP_CO2)
-    c4.metric(f"Prix ({'Total' if simuler_piece else 'au kg'})", f"{row_ref['Prix_euro_kg'] * poids_actuel:.1f} €", help=HELP_PRIX)
+    c1.metric("Score Éco", f"{row_ref.get('Score_Eco', 0)} /100", help=HELP_SCORE)
+    c2.metric("Dureté Rockwell", f"{row_ref.get('Durete_HRC', 0)} HRC", help=HELP_DURETE)
+    c3.metric(f"CO₂ ({'Total' if simuler_piece else 'au kg'})", f"{row_ref.get('Empreinte_CO2', 0) * poids_actuel:.1f} kg", help=HELP_CO2)
+    c4.metric(f"Prix ({'Total' if simuler_piece else 'au kg'})", f"{row_ref.get('Prix_euro_kg', 0) * poids_actuel:.1f} €", help=HELP_PRIX)
     
     st.write("---")
 
@@ -426,7 +407,7 @@ with tab1:
             axe_x_choix = st.selectbox(
                 "Sélectionner la variable de l'Axe X :", 
                 ["Densite", "Prix_euro_kg", "Empreinte_CO2"], 
-                format_func=lambda x: DISPLAY_MAP[x]
+                format_func=lambda x: DISPLAY_MAP.get(x, x)
             )
             
             fig_ashby = go.Figure()
@@ -434,14 +415,14 @@ with tab1:
                 fig_ashby.add_trace(go.Scatter(
                     x=group[axe_x_choix], y=group['Limite_Elastique_MPa'],
                     mode='markers', name=famille, marker=dict(size=7, opacity=0.35), text=group['Nom'],
-                    hovertemplate="<b>%{text}</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
+                    hovertemplate="<b>%{text}</b><br>" + DISPLAY_MAP.get(axe_x_choix, axe_x_choix) + " : %{x}<br>Re : %{y} MPa<extra></extra>"
                 ))
             
             fig_ashby.add_trace(go.Scatter(
                 x=[row_ref[axe_x_choix]], y=[row_ref['Limite_Elastique_MPa']],
                 mode='markers', name=f"Réf: {row_ref['Nom']}",
                 marker=dict(color='#475569', size=15, symbol='diamond', line=dict(color='white', width=2)), text=[row_ref['Nom']],
-                hovertemplate="<b>%{text} (RÉFÉRENCE)</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
+                hovertemplate="<b>%{text} (RÉFÉRENCE)</b><br>" + DISPLAY_MAP.get(axe_x_choix, axe_x_choix) + " : %{x}<br>Re : %{y} MPa<extra></extra>"
             ))
             
             for idx, alt in top_alternatives.iterrows():
@@ -450,16 +431,16 @@ with tab1:
                     x=[alt[axe_x_choix]], y=[alt['Limite_Elastique_MPa']],
                     mode='markers', name=f"#{pos+1} {alt['Nom']}",
                     marker=dict(color=colors[pos], size=13, symbol='circle', line=dict(color='white', width=2)), text=[alt['Nom']],
-                    hovertemplate="<b>%{text} (Alternative #"+str(pos+1)+")</b><br>" + DISPLAY_MAP[axe_x_choix] + " : %{x}<br>Re : %{y} MPa<extra></extra>"
+                    hovertemplate="<b>%{text} (Alternative #"+str(pos+1)+")</b><br>" + DISPLAY_MAP.get(axe_x_choix, axe_x_choix) + " : %{x}<br>Re : %{y} MPa<extra></extra>"
                 ))
                 
             fig_ashby.update_layout(
-                xaxis_title=DISPLAY_MAP[axe_x_choix], yaxis_title="Limite Élastique Re (MPa)", showlegend=True, height=400,
+                xaxis_title=DISPLAY_MAP.get(axe_x_choix, axe_x_choix), yaxis_title="Limite Élastique Re (MPa)", showlegend=True, height=400,
                 margin=dict(t=10, b=10), plot_bgcolor='rgba(241,245,249,0.5)', paper_bgcolor='rgba(0,0,0,0)'
             )
             st.plotly_chart(fig_ashby, use_container_width=True)
 
-        # --- TELECHARGEMENT EN PDF (BLEU) ET CSV (VERT) ALIGNES ---
+        # --- BLOC D'EXPORTATION ---
         st.write("---")
         col_pdf, col_csv = st.columns(2)
         
@@ -471,6 +452,7 @@ with tab1:
                     data=pdf_bytes, 
                     file_name="Rapport_Substitution_MatSwap.pdf", 
                     mime="application/pdf", 
+                    type="primary",
                     use_container_width=True
                 )
         
@@ -479,7 +461,9 @@ with tab1:
             df_export_sub['Gain_CO2_Pct'] = ((row_ref['Empreinte_CO2'] - df_export_sub['Empreinte_CO2']) / row_ref['Empreinte_CO2']) * 100
             df_export_sub['Gain_Prix_Pct'] = ((row_ref['Prix_euro_kg'] - df_export_sub['Prix_euro_kg']) / row_ref['Prix_euro_kg']) * 100
             
-            df_export_sub = df_export_sub[colonnes_brutes_affichage + ['Gain_CO2_Pct', 'Gain_Prix_Pct']].rename(
+            # Filtre dynamique en cas de colonnes manquantes
+            cols_to_export = [c for c in colonnes_brutes_affichage + ['Gain_CO2_Pct', 'Gain_Prix_Pct'] if c in df_export_sub.columns]
+            df_export_sub = df_export_sub[cols_to_export].rename(
                 columns={**DISPLAY_MAP, 'Gain_CO2_Pct': 'Gain CO2 (%)', 'Gain_Prix_Pct': 'Gain Prix (%)'}
             )
             
@@ -524,8 +508,10 @@ with tab2:
         (df_initial['Prix_euro_kg'] <= prix_max)
     ].copy()
     
-    if type_indice == "Traction pure (Max Re / ρ)": df_filtre = df_filtre.sort_values(by='Indice_Traction', ascending=False)
-    elif type_indice == "Flexion pure (Max √Re / ρ)": df_filtre = df_filtre.sort_values(by='Indice_Flexion', ascending=False)
+    if type_indice == "Traction pure (Max Re / ρ)" and 'Indice_Traction' in df_filtre.columns: 
+        df_filtre = df_filtre.sort_values(by='Indice_Traction', ascending=False)
+    elif type_indice == "Flexion pure (Max √Re / ρ)" and 'Indice_Flexion' in df_filtre.columns: 
+        df_filtre = df_filtre.sort_values(by='Indice_Flexion', ascending=False)
 
     st.subheader(f"📊 {len(df_filtre)} matériau(x) valide(s)")
     
@@ -555,7 +541,7 @@ with tab2:
             st.markdown("#### 📈 Positionnement d'Ashby (Filtrage en bloc)")
             axe_x_e = st.selectbox(
                 "Variable de l'Axe X (Étude) :", ["Densite", "Prix_euro_kg", "Empreinte_CO2"],
-                format_func=lambda x: DISPLAY_MAP[x], key="axe_x_etude"
+                format_func=lambda x: DISPLAY_MAP.get(x, x), key="axe_x_etude"
             )
             
             fig_ashby_e = go.Figure()
@@ -578,7 +564,7 @@ with tab2:
                     hovertemplate="<b>%{text} (Top #"+str(pos+1)+")</b><br>Re : %{y} MPa<extra></extra>"
                 ))
             fig_ashby_e.update_layout(
-                xaxis_title=DISPLAY_MAP[axe_x_e], yaxis_title="Limite Élastique Re (MPa)", showlegend=True, height=400,
+                xaxis_title=DISPLAY_MAP.get(axe_x_e, axe_x_e), yaxis_title="Limite Élastique Re (MPa)", showlegend=True, height=400,
                 margin=dict(t=10, b=10), plot_bgcolor='rgba(241,245,249,0.5)', paper_bgcolor='rgba(0,0,0,0)'
             )
             st.plotly_chart(fig_ashby_e, use_container_width=True)
@@ -604,11 +590,13 @@ with tab2:
                     data=pdf_etude, 
                     file_name="Etude_Faisabilite.pdf", 
                     mime="application/pdf", 
+                    type="primary",
                     use_container_width=True
                 )
 
         with c_btn2:
-            df_export = df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP)
+            cols_to_export = [c for c in colonnes_brutes_affichage if c in df_filtre.columns]
+            df_export = df_filtre[cols_to_export].rename(columns=DISPLAY_MAP)
             csv_bytes = df_export.to_csv(index=False, sep=';', decimal=',', encoding='utf-8-sig')
             st.download_button(
                 label="📊 Exporter les Données Brutes (Excel / CSV)", 
@@ -618,4 +606,4 @@ with tab2:
                 use_container_width=True
             )
 
-        st.dataframe(df_filtre[colonnes_brutes_affichage].rename(columns=DISPLAY_MAP).head(20), use_container_width=True)
+        st.dataframe(df_filtre[cols_to_export].rename(columns=DISPLAY_MAP).head(20), use_container_width=True)
