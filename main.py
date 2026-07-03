@@ -14,7 +14,7 @@ except ImportError:
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="MatSwap", page_icon="🔄", layout="wide")
 
-# --- TITRE SAAS PREMIUM ET STYLISATION DES BOUTONS (CSS BLINDÉ CHRONO) ---
+# --- TITRE SAAS PREMIUM ET STYLISATION DES BOUTONS (CSS VALIDE ET BLINDÉ) ---
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght=700;800&display=swap');
@@ -39,28 +39,32 @@ st.markdown("""
             margin-top: 5px;
         }
         
-        /* CIBLE LE BOUTON PDF VIA L'ÉMOJI ET LE COLOURE EN BLEU */
-        button[p-id] p:contains("📄"), button p:contains("📄") {
-            background-color: #2563EB !important;
-            color: white !important;
-        }
-        div.stDownloadButton button:has(p:contains("📄")) {
+        /* COULEUR BLEUE POUR LE BOUTON DANS LA 1ÈRE COLONNE (PDF) */
+        div[data-testid="column"]:nth-of-type(1) .stDownloadButton button,
+        div[data-testid="column"]:nth-child(1) .stDownloadButton button {
             background-color: #2563EB !important;
             color: white !important;
             border: none !important;
+            font-weight: 600 !important;
+            transition: background-color 0.3s ease !important;
         }
-        div.stDownloadButton button:has(p:contains("📄")):hover {
+        div[data-testid="column"]:nth-of-type(1) .stDownloadButton button:hover,
+        div[data-testid="column"]:nth-child(1) .stDownloadButton button:hover {
             background-color: #1D4ED8 !important;
             color: white !important;
         }
         
-        /* CIBLE LE BOUTON EXCEL/CSV VIA L'ÉMOJI ET LE COLOURE EN VERT */
-        div.stDownloadButton button:has(p:contains("📊")) {
+        /* COULEUR VERTE POUR LE BOUTON DANS LA 2ÈME COLONNE (EXCEL / CSV) */
+        div[data-testid="column"]:nth-of-type(2) .stDownloadButton button,
+        div[data-testid="column"]:nth-child(2) .stDownloadButton button {
             background-color: #10B981 !important;
             color: white !important;
             border: none !important;
+            font-weight: 600 !important;
+            transition: background-color 0.3s ease !important;
         }
-        div.stDownloadButton button:has(p:contains("📊")):hover {
+        div[data-testid="column"]:nth-of-type(2) .stDownloadButton button:hover,
+        div[data-testid="column"]:nth-child(2) .stDownloadButton button:hover {
             background-color: #059669 !important;
             color: white !important;
         }
@@ -289,10 +293,6 @@ def generer_pdf_etude(df_top, criteres, type_indice, fig_radar, fig_ashby):
         
     return bytes(pdf.output(dest='S').encode('latin-1', 'replace'))
 
-# --- CONFIGURATION DES LIMITES GLOBALES POUR LE RADAR ---
-df_initial = charger_donnees()
-colonnes_brutes_affichage = list(DISPLAY_MAP.keys())
-
 # --- INTERFACE FLUIDE ---
 with st.sidebar:
     st.header("⚙️ Configuration")
@@ -459,7 +459,7 @@ with tab1:
             )
             st.plotly_chart(fig_ashby, use_container_width=True)
 
-        # --- BLOC D'EXPORTATION CHRONO ---
+        # --- TELECHARGEMENT EN PDF (BLEU) ET CSV (VERT) ALIGNES ---
         st.write("---")
         col_pdf, col_csv = st.columns(2)
         
