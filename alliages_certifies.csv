@@ -1,0 +1,42 @@
+Nom;Famille;Norme_Reference;Densite_kg_m3;Module_Young_GPa;Limite_Elastique_MPa;Empreinte_CO2_kgCO2_kg;Prix_euro_kg;Temp_Fusion_C;Conductivite_W_mK;Recyclabilite_pct;Durete_HRC;Notes_Source
+Acier S235JR;Acier;EN 10025-2;7850;210;235;1.85;0.8;1520;50;95;10;Re=235 MPa (épaisseur ≤16 mm), E=210 GPa EN 1993-1-1, CO2 BF-BOF worldsteel 2023
+Acier S275JR;Acier;EN 10025-2;7850;210;275;1.85;0.85;1520;50;95;12;Re=275 MPa (épaisseur ≤16 mm), EN 10025-2 tableau 1
+Acier S355J2;Acier;EN 10025-2;7850;210;355;1.95;1.0;1520;49;95;14;Re=355 MPa (épaisseur ≤16 mm), nuance la plus utilisée en Europe
+Acier S460ML;Acier;EN 10025-3;7850;210;460;2.0;1.2;1520;48;95;18;Laminage thermomécanique, EN 10025-3, utilisé viaduc de Millau
+Acier S690QL;Acier;EN 10025-6;7850;210;690;2.1;1.6;1500;46;90;28;Trempé-revenu, ρ=7.85 Metonorm, Re≥690 MPa épaisseur ≤50 mm
+Acier inoxydable 304 (1.4301);Acier inox;EN 10088 / AISI 304;7930;193;215;6.8;3.5;1450;20;85;8;ρ=7.93 g/cm³, E=193 GPa, Tf=1400-1450°C, λ=20 W/mK — material-properties.org
+Acier inoxydable 316L (1.4404);Acier inox;EN 10088 / AISI 316L;7980;193;170;6.9;4.5;1385;14;85;7;Mo 2-3%, Tf liquidus≈1400°C, λ=14 W/mK — Robert Laminage / Aperam
+Acier inoxydable 430 (1.4016);Acier inox;EN 10088 / AISI 430;7750;220;250;6.0;2.8;1450;26;80;10;Ferritique, λ=26 W/mK, Tf≈1450°C — material-properties.org
+Acier inoxydable duplex 2205 (1.4462);Acier inox;EN 10088 / SAF 2205;7800;200;450;7.0;5.5;1450;19;85;22;Austéno-ferritique, Re double du 304, λ=19 W/mK — material-properties.org / Aperam
+Acier inoxydable 17-4PH (1.4542);Acier inox;EN 10088 / AISI 630;7780;197;1000;8.0;12.0;1440;18;75;40;Durcissement précipitation, condition H900, λ=18 W/mK — stainless.eu fiche 1.4542
+Acier à outils H13 (1.2344);Acier outil;AISI H13 / EN 1.2344;7800;215;1200;3.2;6.0;1427;25;70;46;Travail à chaud, trempé-revenu 44-52 HRC, E=215 GPa — CCDMD fiche 42
+Acier à roulements 100Cr6 (1.3505);Acier outil;EN 10083 / AISI 52100;7830;205;1500;2.8;2.5;1450;46;80;60;E=205 GPa (biblio Annaba), état trempé-revenu HRC 60-64, λ≈46 W/mK
+Acier maraging 300 (18Ni-300);Acier spécial;AMS 6514 / DIN 1.6354;8000;190;1700;4.5;25.0;1413;20;65;52;Vieilli 480°C/3h, HRC≈52-54, usinabilité recuit 30-35 HRC — VMT/machining-custom.com
+Acier 4340 (1.6565);Acier spécial;AISI 4340 / EN 36CrNiMo4;7850;200;1470;3.0;3.5;1427;42;75;50;Trempé-revenu, acier de référence haute résistance, Rm≈1700 MPa
+Fonte grise GJL-250;Fonte;EN 1561;7150;100;250;1.4;0.7;1200;46;90;-1;Graphite lamellaire, E≈80-130 GPa moyen 100, λ=46 W/mK, Re par convention≈Rm/2
+Fonte ductile GJS-500-7;Fonte;EN 1563;7100;169;320;1.5;0.9;1150;36;90;-1;Graphite sphéroïdal, Rp0.2=320 MPa, E=169 GPa — EN 1563 / arxiv 2312.15485
+Aluminium 1050 H111 (Al 99.5%);Aluminium;EN 573-1 / EN 485;2700;69;35;8.5;2.2;652;222;95;-1;Quasiment pur, λ=239 W/mK recuit, Tf=645-658°C — Euralliage tableau EN 573
+Aluminium 2024-T3;Aluminium;EN 573-1 / AMS 4035;2780;73;345;9.2;4.5;638;121;85;-1;"E=73.1 GPa, Rp0.2=345 MPa — Chalco; AMS 4035 / QQ-A-250/4"
+Aluminium 3003-H14;Aluminium;EN 573-1;2730;69;145;8.7;3.2;654;193;90;-1;Série 3000 AlMn, résistance moyenne, bonne formabilité
+Aluminium 5083-H112;Aluminium;EN 573-1 / EN 485;2660;70;145;8.6;3.5;638;117;90;-1;Usage marin, soudable, λ=117 W/mK
+Aluminium 6061-T6;Aluminium;EN 573-1 / AMS 4150;2700;69;276;8.8;3.8;652;167;90;-1;"E=68.9 GPa, Rp0.2=276 MPa — Chalco/DDprototype; MDS Montpellier Re=310 MPa T6"
+Aluminium 6082-T6;Aluminium;EN 573-1 / EN 755;2710;70;260;8.8;3.6;650;170;90;-1;Proche 6061, plus courant en Europe, λ≈170 W/mK
+Aluminium 7075-T6;Aluminium;EN 573-1 / AMS-QQ-A-225/9;2810;72;503;9.5;5.5;635;130;85;-1;E=71.7 GPa, Rp0.2=503 MPa, Rm≥572 MPa — Chalco / weerg.com / Chalco 2024
+Aluminium A380 (fonderie);Aluminium;ASTM B85 / EN AC-46000;2740;71;160;9.0;3.0;595;96;80;-1;Alliage de fonderie sous pression, λ≈96 W/mK
+Cuivre pur ETP C11000 (CW004A);Cuivre;EN 1652 / ASTM B187;8940;117;70;3.5;9.2;1083;385;95;-1;Cu≥99.9%, λ=385 W/mK, Tf=1083°C, ASTM B187/B601 — CCDMD fiche 72
+Laiton CuZn30 (CW505L);Cuivre;EN 1652 / DIN 2.0265;8520;110;120;4.2;7.5;910;123;90;-1;Phase α, Tf≈910°C, excellente formabilité à froid — Matthey CuZn30 / thyssenkrupp
+Laiton CuZn40 (CW509L);Cuivre;EN 1652 / DIN 2.0360;8390;100;140;4.1;7.0;905;116;90;-1;Phase α+β, Tf≈905°C, bonne usinabilité — CopperAlliance CuZn40
+Bronze phosphoreux CuSn8 (CW453K);Cuivre;EN 1652;8800;110;350;4.8;10.5;1000;62;85;-1;λ≈62 W/mK, bonne résistance à l'usure — MDS fiche CuSn8
+Bronze aluminium CuAl10Fe3 (CW306G);Cuivre;EN 1652;7600;120;400;4.6;9.0;1040;59;85;-1;Excellente résistance corrosion + usure, λ≈59 W/mK
+Cupronickel CuNi30Mn1Fe (CW354H);Cuivre;EN 1652;8940;150;130;5.2;18.0;1170;29;85;-1;Marine, échangeurs thermiques, λ=29 W/mK, Tf≈1170°C
+Titane Grade 2 (pur);Titane;ASTM B265 / ASTM B337;4510;105;275;35.0;20.0;1668;16;95;22;ρ=4.51 g/cm³, Re=275 MPa, E=105 GPa, λ=16 W/mK — HonTitan / NeoNickel
+Titane Ti-6Al-4V Grade 5;Titane;ASTM B348 / AMS 4928;4430;114;880;40.0;35.0;1660;7;90;36;ρ=4.43 g/cm³, Re=880 MPa, Rm=950-1100 MPa, λ=7 W/mK — LangHe / NeoNickel
+Titane Ti-3Al-2.5V Grade 9;Titane;ASTM B337 / AMS 4943;4480;105;520;38.0;30.0;1650;10;90;30;Tubes aéronautiques, compromise Grade2/Grade5, E=105 GPa
+Titane Ti-6Al-2Sn-4Zr-2Mo;Titane;AMS 4919;4540;114;1000;42.0;45.0;1649;8;85;40;Haute résistance à chaud, moteurs aéro, E=114 GPa
+Inconel 718 (UNS N07718);Nickel;AMS 5596 / AMS 5662;8190;200;1100;18.0;55.0;1336;11;70;44;"λ=11.4 W/mK à 20°C — usinage-decolletage.fr; Rm≈1380 MPa vieilli; Tf≈1336°C"
+Inconel 625 (UNS N06625);Nickel;AMS 5581 / ASTM B443;8440;208;430;20.0;50.0;1350;9;70;25;Solution solide, Rm≈930 MPa, corrosion marine/chimique — metalstripsolutions.com
+Hastelloy C-276 (UNS N10276);Nickel;AMS 5750 / ASTM B575;8890;205;310;22.0;65.0;1371;10;65;22;Ni-Mo-Cr, Mo 15-17%, résistance corrosion universelle — usinage-decolletage.fr
+Nimonic 80A (UNS N07080);Nickel;BS HR1 / AMS 5715;8190;221;620;19.0;60.0;1320;12;68;30;Durcissement γ', turbines à gaz, E=221 GPa, Tf≈1320°C
+Magnésium AZ31B;Magnésium;ASTM B90 / ASTM B107;1770;45;200;15.0;4.5;630;77;80;-1;Le plus courant des Mg corroyés, bonne soudabilité, λ=77 W/mK — zintilon.com / conceptmetal
+Magnésium AZ91D;Magnésium;ASTM B94 / ASTM B275;1810;45;150;15.0;4.0;598;72;80;-1;Moulage sous pression, Al 9% + Zn 1%, Tf≈598°C — zintilon.com / boyi
+Magnésium WE43;Magnésium;AMS 4427;1840;44;200;17.0;9.0;640;51;75;-1;Terres rares (Y+Nd+Zr), fluage >300°C, aérospatiale/médical — le-creator.com
