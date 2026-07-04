@@ -62,29 +62,41 @@ HELP_SCORE = "Note sur 100 valorisant les matériaux bas carbone et hautement re
 
 # --- CHARGEMENT DE LA NOUVELLE BASE DE DONNÉES CERTIFIÉE ---
 @st.cache_data
+# --- CHARGEMENT DE LA BASE DE DONNÉES CERTIFIÉE ---
+@st.cache_data
 def charger_donnees():
-    # Lecture de ton nouveau fichier certifié
     df = pd.read_csv('alliages_certifies.csv', sep=';')
     
-    # 1. CARTOGRAPHIE INTELLIGENTE : Traduit automatiquement les colonnes de Claude
+    # 1. CARTOGRAPHIE INTELLIGENTE ET SÉCURISÉE ANTI-DOUBLONS
     mapping = {}
+    assigned_targets = set()
+    
     for col in df.columns:
         c = col.lower()
-        if 'nom' in c: mapping[col] = 'Nom'
-        elif 'famille' in c: mapping[col] = 'Famille'
-        elif 'dens' in c: mapping[col] = 'Densite'
-        elif 'young' in c or 'rigid' in c: mapping[col] = 'Module_Young_GPa'
-        elif 'elast' in c or 're' in c: mapping[col] = 'Limite_Elastique_MPa'
-        elif 'duret' in c or 'hrc' in c: mapping[col] = 'Durete_HRC'
-        elif 'fusion' in c or 'temp' in c: mapping[col] = 'Temp_Fusion_C'
-        elif 'conduct' in c: mapping[col] = 'Conductivite_Thermique_W_mK'
-        elif 'co2' in c or 'carbone' in c or 'empreinte' in c: mapping[col] = 'Empreinte_CO2'
-        elif 'recycl' in c: mapping[col] = 'Recyclabilite_pct'
-        elif 'prix' in c or 'euro' in c or 'cout' in c or 'coût' in c: mapping[col] = 'Prix_euro_kg'
+        target = None
         
+        if 'nom' in c and 'Nom' not in assigned_targets: target = 'Nom'
+        elif 'famille' in c and 'Famille' not in assigned_targets: target = 'Famille'
+        elif 'dens' in c and 'Densite' not in assigned_targets: target = 'Densite'
+        elif ('young' in c or 'rigid' in c) and 'Module_Young_GPa' not in assigned_targets: target = 'Module_Young_GPa'
+        elif ('elast' in c or 're' in c) and 'Limite_Elastique_MPa' not in assigned_targets: target = 'Limite_Elastique_MPa'
+        elif ('duret' in c or 'hrc' in c) and 'Durete_HRC' not in assigned_targets: target = 'Durete_HRC'
+        elif ('fusion' in c or 'temp' in c) and 'Temp_Fusion_C' not in assigned_targets: target = 'Temp_Fusion_C'
+        elif 'conduct' in c and 'Conductivite_Thermique_W_mK' not in assigned_targets: target = 'Conductivite_Thermique_W_mK'
+        elif ('co2' in c or 'carbone' in c or 'empreinte' in c) and 'Empreinte_CO2' not in assigned_targets: target = 'Empreinte_CO2'
+        elif 'recycl' in c and 'Recyclabilite_pct' not in assigned_targets: target = 'Recyclabilite_pct'
+        elif ('prix' in c or 'euro' in c or 'cout' in c or 'coût' in c) and 'Prix_euro_kg' not in assigned_targets: target = 'Prix_euro_kg'
+        
+        if target:
+            mapping[col] = target
+            assigned_targets.add(target) # On verrouille ce nom pour qu'il ne soit pas utilisé 2 fois
+            
     df = df.rename(columns=mapping)
     
-    # 2. BOUCLIER DE SÉCURITÉ : Si une colonne optionnelle manque, on injecte des valeurs réalistes
+    # SÉCURITÉ ABSOLUE : Destruction de toute colonne en double qui aurait pu survivre
+    df = df.loc[:, ~df.columns.duplicated()].copy()
+    
+    # 2. BOUCLIER DE SÉCURITÉ : Injecte des valeurs par défaut si Claude a oublié une colonne
     colonnes_requises = {
         'Nom': 'Alliage Inconnu', 'Famille': 'Non spécifié', 'Densite': 7800.0,
         'Module_Young_GPa': 200.0, 'Limite_Elastique_MPa': 300.0, 'Durete_HRC': 0.0,
@@ -96,16 +108,21 @@ def charger_donnees():
         if col not in df.columns:
             df[col] = val_defaut
             
-    # 3. NETTOYAGE DES ZÉROS : Évite les divisions par zéro fatales
+    # 3. NETTOYAGE : Évite les divisions par zéro
     colonnes_numeriques = ['Densite', 'Module_Young_GPa', 'Limite_Elastique_MPa', 'Durete_HRC', 'Empreinte_CO2', 'Prix_euro_kg', 'Temp_Fusion_C', 'Conductivite_Thermique_W_mK', 'Recyclabilite_pct']
     for col in colonnes_numeriques:
+        # On force la conversion en numérique au cas où il y ait du texte (ex: "500 €")
+        df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '.').str.replace(r'[^\d.]', '', regex=True), errors='coerce').fillna(1e-6)
         df[col] = df[col].replace(0, 1e-6)
             
-    # 4. CALCULS DES INDICES METIER & ECO-SCORE
+    # 4. CALCULS DES INDICES METIER
     df['Indice_Traction'] = df['Limite_Elastique_MPa'] / df['Densite']
     df['Indice_Flexion'] = np.sqrt(df['Limite_Elastique_MPa']) / df['Densite']
     
-    df['Score_Eco'] = df.apply(lambda row: max(0, min(100, int((row['Recyclabilite_pct'] / 100) * (5 / row['Empreinte_CO2']) * 100))), axis=1)
+    def calc_eco_score(row):
+        return max(0, min(100, int((row['Recyclabilite_pct'] / 100) * (5 / row['Empreinte_CO2']) * 100)))
+        
+    df['Score_Eco'] = df.apply(calc_eco_score, axis=1)
     
     return df
 
